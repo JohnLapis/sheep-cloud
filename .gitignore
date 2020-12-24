@@ -1,0 +1,16 @@
+# Emacs stuff
+*~
+*.org
+
+# Flask stuff:
+instance/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Unit test
+.tox/
+
+# dotenv
+.env
