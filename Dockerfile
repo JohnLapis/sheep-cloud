@@ -7,6 +7,6 @@ COPY ./wsgi.py /app/
 COPY ./cloud_sheep/ /app/cloud_sheep/
 WORKDIR /app/
 
-EXPOSE 8000
+EXPOSE $PORT
 
-CMD gunicorn -b 0.0.0.0:8000 wsgi:app
+CMD gunicorn -b 0.0.0.0:$PORT wsgi:app
