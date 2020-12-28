@@ -1,10 +1,10 @@
 import pytest
-import cloud_sheep
+from . import app
 
 
 @pytest.fixture
 def client():
-    with cloud_sheep.app.test_client() as client:
+    with app.test_client() as client:
         yield client
 
 def test_api_routes(client):
