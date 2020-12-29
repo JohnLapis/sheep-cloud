@@ -1,14 +1,13 @@
-from flask import Flask, Blueprint
-from .message import Message
-from . import db
+from flask import Flask
 
+from . import api
+from .views import funcs
 
-LATEST_VERSION = 'v1'
+LATEST_VERSION = "v1"
 
 app = Flask(__name__)
 
-api_bp = Blueprint('api', __name__)
-api_bp.add_url_rule('/message/<int:id>', view_func=Message.as_view('message', db))
+api.setup_url_rules(**funcs)
 
-app.register_blueprint(api_bp, url_prefix='/api')
-app.register_blueprint(api_bp, url_prefix=f'/api/{LATEST_VERSION}')
+app.register_blueprint(api.bp, url_prefix="/api")
+app.register_blueprint(api.bp, url_prefix=f"/api/{LATEST_VERSION}")
