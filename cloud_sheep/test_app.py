@@ -39,7 +39,7 @@ class TestMessageRoute:
         assert res.json == message
 
 
-    def test_post_one_message(self, client):
+    def test_post_message(self, client):
         message = {"text": "test post message", "title": "test post title"}
 
         res = client.post("/api/v1/messages", json=message)
