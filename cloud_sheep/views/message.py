@@ -1,5 +1,5 @@
 from flask.views import MethodView
-from flask import request
+from flask import request, abort
 from bson.objectid import ObjectId
 
 
@@ -8,10 +8,16 @@ class Message(MethodView):
         super()
         self.db = db
 
-    def get(self, id):
-        message = self.db.find_one({"_id": ObjectId(id)})
-        message["_id"] = str(message["_id"])
-        return message
+    def get(self, id=None):
+        if id is not None:
+            message = self.db.find_one({"_id": ObjectId(id)})
+            if message is None:
+                abort(404)
+            message["_id"] = str(message["_id"])
+            return message
+        else:
+            # request.args
+            pass
 
     def post(self, id=None):
         if id is None:
