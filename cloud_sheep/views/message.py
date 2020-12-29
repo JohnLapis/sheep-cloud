@@ -9,15 +9,15 @@ class MessageView(MethodView):
         self.db = db
 
     def get(self, id=None):
-        if id is not None:
+        if id is None:
+            # request.args
+            pass
+        else:
             message = self.db.find_one({"_id": ObjectId(id)})
             if message is None:
                 abort(404)
             message["_id"] = str(message["_id"])
             return message
-        else:
-            # request.args
-            pass
 
     def post(self):
         if isinstance(request.json, list):
