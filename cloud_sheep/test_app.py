@@ -1,8 +1,6 @@
 import pytest
 from bson.objectid import ObjectId
 
-import json
-
 from . import LATEST_VERSION, app
 from .db import conn
 
@@ -39,7 +37,7 @@ class TestMessageRoute:
         assert self.db.delete_one({"_id": message_id}).deleted_count == 1
         assert res.status_code == 200
         message["_id"] = str(message_id)
-        assert json.loads(res.data) == message
+        assert res.json == message
 
     def test_post_message_using_id(self, client):
         while True:
