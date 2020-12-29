@@ -1,6 +1,8 @@
-from flask.views import MethodView
-from flask import request, abort
 from bson.objectid import ObjectId
+from flask import abort, request
+from flask.views import MethodView
+
+from ..entities.message import create_message
 
 
 class MessageView(MethodView):
@@ -21,14 +23,16 @@ class MessageView(MethodView):
 
     def post(self):
         if isinstance(request.json, list):
-            messages = [{"text": message["text"]} for message in request.json]
+            messages = [create_message(**message) for message in request.json]
             res = self.db.insert_many(messages)
+            inserted_ids = res.inserted_ids
         else:
-            message = {"text": request.json["text"]}
+            message = create_message(**request.json)
             res = self.db.insert_one(message)
+            inserted_ids = [res.inserted_id]
 
         assert res.acknowledged
-        return {"_id": str(res.inserted_id)}, 201
+        return {"_ids": list(map(str, inserted_ids)) }, 201
 
     def put(self, id):
         pass

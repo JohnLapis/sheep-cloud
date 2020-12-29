@@ -40,12 +40,30 @@ class TestMessageRoute:
 
 
     def test_post_one_message(self, client):
-        message = {"text": "test post message"}
+        message = {"text": "test post message", "title": "test post title"}
 
         res = client.post("/api/v1/messages", json=message)
 
-        id = ObjectId(res.json['_id'])
-        message["_id"] = id
-        assert message == self.db.find_one_and_delete({"_id": id})
+        id = ObjectId(res.json["_ids"][0])
+        created_message = self.db.find_one_and_delete({"_id": id})
+        assert created_message['text'] == message['text']
+        assert created_message['title'] == message['title']
+        assert created_message['size'] == len(message['text'])
+        assert res.status_code == 201
+
+    def test_post_many_messages(self, client):
+        NUM_MESSAGES = 5
+        messages = [{"text": f"test post message {i}"} for i in range(NUM_MESSAGES)]
+
+        res = client.post("/api/v1/messages", json=messages)
+
+        assert len(res.json['_ids']) == NUM_MESSAGES
+        for id in res.json['_ids']:
+            created_message = self.db.find_one_and_delete({"_id": ObjectId(id)})
+            matching_messages = [m for m in messages
+                                 if m['text'] == created_message['text']]
+            assert len(matching_messages) == 1
+            assert created_message['size'] == len(matching_messages[0]['text'])
+
         assert res.status_code == 201
 
