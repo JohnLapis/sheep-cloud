@@ -19,15 +19,16 @@ class Message(MethodView):
             # request.args
             pass
 
-    def post(self, id=None):
-        if id is None:
-            id = ObjectId()
+    def post(self):
+        if isinstance(request.json, list):
+            messages = [{"text": message["text"]} for message in request.json]
+            res = self.db.insert_many(messages)
         else:
-            id = ObjectId(id)
+            message = {"text": request.json["text"]}
+            res = self.db.insert_one(message)
 
-        message = {"_id": id, "text": request.json["text"]}
-        assert self.db.insert_one(message).acknowledged
-        return "i don't know what POST should return"
+        assert res.acknowledged
+        return {"_id": str(res.inserted_id)}, 201
 
     def put(self, id):
         pass

@@ -10,7 +10,6 @@ def client():
     with app.test_client() as client:
         yield client
 
-
 def test_api_route_versioning(client):
     res = client.get("/api")
     assert res.status_code == 204
@@ -39,16 +38,14 @@ class TestMessageRoute:
         message["_id"] = str(message_id)
         assert res.json == message
 
-    def test_post_message_using_id(self, client):
-        while True:
-            message_id = ObjectId()
-            if not self.db.find_one({"_id": message_id}):
-                break
 
+    def test_post_one_message(self, client):
         message = {"text": "test post message"}
 
-        res = client.post(f"/api/v1/messages/{message_id}", json=message)
+        res = client.post("/api/v1/messages", json=message)
 
-        message["_id"] = message_id
-        assert self.db.find_one_and_delete({"_id": message_id}) == message
-        assert res.status_code == 200
+        id = ObjectId(res.json['_id'])
+        message["_id"] = id
+        assert message == self.db.find_one_and_delete({"_id": id})
+        assert res.status_code == 201
+
