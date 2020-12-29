@@ -3,7 +3,7 @@ from flask import request, abort
 from bson.objectid import ObjectId
 
 
-class Message(MethodView):
+class MessageView(MethodView):
     def __init__(self, db):
         super()
         self.db = db
