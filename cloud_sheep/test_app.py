@@ -3,7 +3,7 @@ from bson.objectid import ObjectId
 
 import json
 
-from . import app
+from . import LATEST_VERSION, app
 from .db import conn
 
 
@@ -16,7 +16,7 @@ def client():
 def test_api_route_versioning(client):
     res = client.get("/api")
     assert res.status_code == 204
-    res = client.get("/api/v1")
+    res = client.get(f"/api/{LATEST_VERSION}")
     assert res.status_code == 204
 
 
