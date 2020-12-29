@@ -9,6 +9,7 @@ pytest = "*"
 black = "*"
 flake8 = "*"
 pre-commit = "*"
+isort = "*"
 
 [packages]
 importlib-metadata = "==2.1.1"
@@ -24,3 +25,6 @@ mongoengine = "*"
 
 [requires]
 python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true
