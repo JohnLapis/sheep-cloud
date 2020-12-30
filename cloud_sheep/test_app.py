@@ -44,7 +44,7 @@ class TestMessageRoute:
 
         res = client.post("/api/v1/messages", json=message)
 
-        id = ObjectId(res.json["_ids"][0])
+        id = ObjectId(res.json["inserted_ids"][0])
         created_message = self.db.find_one_and_delete({"_id": id})
         assert created_message['text'] == message['text']
         assert created_message['title'] == message['title']
@@ -57,8 +57,8 @@ class TestMessageRoute:
 
         res = client.post("/api/v1/messages", json=messages)
 
-        assert len(res.json['_ids']) == NUM_MESSAGES
-        for id in res.json['_ids']:
+        assert len(res.json['inserted_ids']) == NUM_MESSAGES
+        for id in res.json['inserted_ids']:
             created_message = self.db.find_one_and_delete({"_id": ObjectId(id)})
             matching_messages = [m for m in messages
                                  if m['text'] == created_message['text']]

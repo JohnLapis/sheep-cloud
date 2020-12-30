@@ -32,7 +32,7 @@ class MessageView(MethodView):
             inserted_ids = [res.inserted_id]
 
         assert res.acknowledged
-        return {"_ids": list(map(str, inserted_ids)) }, 201
+        return {"inserted_ids": list(map(str, inserted_ids)) }, 201
 
     def put(self, id):
         pass
