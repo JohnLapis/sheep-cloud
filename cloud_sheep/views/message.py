@@ -2,7 +2,7 @@ from bson.objectid import ObjectId
 from flask import abort, request
 from flask.views import MethodView
 
-from ..entities.message import create_message
+from ..entities.message import create_message, create_partial_message
 
 
 class MessageView(MethodView):
@@ -33,8 +33,17 @@ class MessageView(MethodView):
         assert res.acknowledged
         return {"inserted_ids": list(map(str, inserted_ids))}, 201
 
-    def put(self, id):
-        pass
+    def put(self, id=None):
+        # i.e., if the filter was given
+        if id is None:
+            pass
+        else:
+            update = create_partial_message(**request.json)
+            res = self.db.update_one({"_id": ObjectId(id)}, {"$set": update})
+            assert res.matched_count == 1
+
+        assert res.acknowledged
+        return {"modified_count": res.modified_count}, 201
 
     def delete(self, id):
         pass

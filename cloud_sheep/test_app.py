@@ -101,3 +101,15 @@ class TestMessageRoute:
 
         assert res.status_code == 201
 
+    def test_put_message_using_id(self, client):
+        old_message = {"text": "test put text", "title": "test put title"}
+        id = self.db.insert_one(old_message).inserted_id
+
+        new_text = {"text": "new text"}
+        res = client.put(f"/api/v1/messages/{id}", json=new_text)
+
+        updated_message = self.db.find_one_and_delete({"_id": id})
+        assert updated_message["text"] == new_text["text"]
+        assert updated_message["size"] == len(new_text["text"])
+        assert updated_message["title"] == old_message["title"]
+        assert res.status_code == 201 and res.json["modified_count"] == 1
