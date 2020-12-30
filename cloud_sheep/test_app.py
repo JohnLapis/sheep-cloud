@@ -63,9 +63,9 @@ class TestMessageRoute:
 
         id = ObjectId(res.json["inserted_ids"][0])
         created_message = self.db.find_one_and_delete({"_id": id})
-        assert created_message['text'] == message['text']
-        assert created_message['title'] == message['title']
-        assert created_message['size'] == len(message['text'])
+        assert created_message["text"] == message["text"]
+        assert created_message["title"] == message["title"]
+        assert created_message["size"] == len(message["text"])
         assert res.status_code == 201
 
     def test_post_message_with_invalid_text(self, client):
@@ -90,13 +90,14 @@ class TestMessageRoute:
 
         res = client.post("/api/v1/messages", json=messages)
 
-        assert len(res.json['inserted_ids']) == NUM_MESSAGES
-        for id in res.json['inserted_ids']:
+        assert len(res.json["inserted_ids"]) == NUM_MESSAGES
+        for id in res.json["inserted_ids"]:
             created_message = self.db.find_one_and_delete({"_id": ObjectId(id)})
-            matching_messages = [m for m in messages
-                                 if m['text'] == created_message['text']]
+            matching_messages = [
+                m for m in messages if m["text"] == created_message["text"]
+            ]
             assert len(matching_messages) == 1
-            assert created_message['size'] == len(matching_messages[0]['text'])
+            assert created_message["size"] == len(matching_messages[0]["text"])
 
         assert res.status_code == 201
 
