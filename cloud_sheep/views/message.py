@@ -15,9 +15,8 @@ class MessageView(MethodView):
             # request.args
             pass
         else:
-            message = self.db.find_one({"_id": ObjectId(id)})
-            if message is None:
-                abort(404)
+            message = self.db.find_one(ObjectId(id))
+            if not message: abort(404)
             message["_id"] = str(message["_id"])
             return message
 

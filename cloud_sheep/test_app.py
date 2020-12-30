@@ -10,6 +10,7 @@ def client():
     with app.test_client() as client:
         yield client
 
+
 def test_api_route_versioning(client):
     res = client.get("/api")
     assert res.status_code == 204
@@ -38,10 +39,26 @@ class TestMessageRoute:
         message["_id"] = str(message_id)
         assert res.json == message
 
+    def test_get_message_using_nonexistent_id(self, client):
+        # guarantees id doesn't already exist
+        message = {"text": "text"}
+        id = self.db.insert_one(message).inserted_id
+        self.db.delete_one({"_id": id})
+
+        res = client.get(f"/api/messages/{id}")
+
+        assert res.status_code == 404
+
+    def test_get_message_using_invalid_id(self, client):
+        id = "invalid id"
+        res = client.get(f"/api/messages/{id}")
+
+        assert res.status_code == 400
+        assert res.data == b"id is invalid."
+
 
     def test_post_message(self, client):
         message = {"text": "test post message", "title": "test post title"}
-
         res = client.post("/api/v1/messages", json=message)
 
         id = ObjectId(res.json["inserted_ids"][0])
@@ -50,6 +67,22 @@ class TestMessageRoute:
         assert created_message['title'] == message['title']
         assert created_message['size'] == len(message['text'])
         assert res.status_code == 201
+
+    def test_post_message_with_invalid_text(self, client):
+        message = {"text": False}
+        res = client.post("/api/v1/messages", json=message)
+
+        assert res.status_code == 400
+        assert res.data == b"message is invalid."
+
+    def test_post_message_with_too_large_title(self, client):
+        from .entities.message import TITLE_MAX_LENGTH
+
+        message = {"text": "test post message", "title": "a" * (TITLE_MAX_LENGTH + 1)}
+        res = client.post("/api/v1/messages", json=message)
+
+        assert res.status_code == 400
+        assert res.data == b"message is invalid."
 
     def test_post_many_messages(self, client):
         NUM_MESSAGES = 5
