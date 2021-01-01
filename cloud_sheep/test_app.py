@@ -10,7 +10,6 @@ def client():
     with app.test_client() as client:
         yield client
 
-
 def test_api_route_versioning(client):
     res = client.get("/api")
     assert res.status_code == 204
