@@ -1,6 +1,6 @@
 from bson.errors import InvalidId
 
-from .entities.message import MessageValidationError
+from .entities.message import InvalidMessage
 
 
 class InvalidParam(Exception):
@@ -16,7 +16,7 @@ class InvalidQuery(Exception):
 
 
 def setup_error_handlers(app):
-    @app.errorhandler(MessageValidationError)
+    @app.errorhandler(InvalidMessage)
     @app.errorhandler(InvalidParam)
     @app.errorhandler(InvalidValue)
     @app.errorhandler(InvalidQuery)
