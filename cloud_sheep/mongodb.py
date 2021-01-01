@@ -4,8 +4,10 @@ import re
 from urllib.parse import quote_plus as encode_url
 
 import mongoengine
+import pymongo
 
-from .exceptions import InvalidValue
+from .exceptions import InvalidQuery, InvalidValue
+from .utils import get_param_type
 
 
 def convert_to_date(value):
@@ -17,7 +19,7 @@ def convert_to_date(value):
         match["day"] = int(match["day"]) or 1
         return datetime.datetime(**match)
     except (AttributeError, TypeError):
-        raise InvalidValue
+        raise InvalidValue(f"{value} is not a valid date.")
 
 
 TYPE_CONVERTER_DICT = {
@@ -25,8 +27,22 @@ TYPE_CONVERTER_DICT = {
 }
 
 
-def get_type_converter(type):
-    return TYPE_CONVERTER_DICT[type]
+def get_type_converter(param):
+    return TYPE_CONVERTER_DICT[get_param_type(param)]
+
+
+OPERATOR_TABLE = {
+    "gt": "$gt",
+    "lt": "$lt",
+    "and": "$and",
+}
+
+
+def get_db_op(op):
+    try:
+        return OPERATOR_TABLE[op]
+    except KeyError:
+        raise InvalidValue(f"{op} operator doesn't exist.")
 
 
 def get_db_host():
@@ -45,3 +61,44 @@ class DatabaseClient:
 
     def __getattr__(self, name):
         return getattr(self._db, name)
+
+    def create_one_param_query(self, param, exprs):
+        query_exprs = {}
+        for expr in exprs:
+            try:
+                op, value = expr.split(":")
+            except ValueError:
+                raise InvalidValue(f"{expr} is not a valid value.")
+            query_exprs[get_db_op(op)] = get_type_converter(param)(value)
+
+        return {param: query_exprs}
+
+    def create_query(self, query_dict):
+        filters = []
+        for param in query_dict.keys():
+            values = query_dict.getlist(param)
+            filters.append(self.create_one_param_query(param, values))
+
+        if not filters:
+            raise InvalidQuery("No parameters were given.")
+
+        return {get_db_op("and"): filters}
+
+    def get_sort_param(self, param):
+        try:
+            if param[0] == "-":
+                param = param[1:]
+                direction = pymongo.DESCENDING
+            else:
+                direction = pymongo.ASCENDING
+
+            assert len(param) > 0
+            return (param, direction)
+        except (IndexError, AssertionError):
+            raise InvalidValue("The limit parameter should be a positive integer.")
+
+    def get_limit_param(self, param):
+        try:
+            return 0 if param is None else int(param)
+        except ValueError:
+            raise InvalidValue("The limit parameter should be a positive integer.")

@@ -1,9 +1,153 @@
 from datetime import datetime
 
+import pymongo
 import pytest
 
-from .exceptions import InvalidValue
-from .mongodb import convert_to_date
+from .exceptions import InvalidParam, InvalidQuery, InvalidValue
+from .mongodb import DatabaseClient, convert_to_date
+
+
+@pytest.fixture
+def app(scope="module"):
+    from flask import Flask
+
+    return Flask(__name__)
+
+
+class TestDatabaseClient:
+    @classmethod
+    def setup_class(cls):
+        cls.client = DatabaseClient()
+
+    @classmethod
+    def teardown_class(cls):
+        cls.client.conn.close()
+
+    @pytest.mark.parametrize(
+        "param,exprs,expected",
+        [
+            (
+                "created_at",
+                ["lt:2020"],
+                {"created_at": {"$lt": datetime(year=2020, month=1, day=1)}},
+            ),
+            (
+                "last_modified",
+                ["gt:202012"],
+                {"last_modified": {"$gt": datetime(year=2020, month=12, day=1)}},
+            ),
+            (
+                "created_at",
+                ["lt:20201230", "gt:20201229"],
+                {
+                    "created_at": {
+                        "$lt": datetime(year=2020, month=12, day=30),
+                        "$gt": datetime(year=2020, month=12, day=29),
+                    },
+                },
+            ),
+        ],
+    )
+    def test_create_one_param_query_with_valid_input(self, param, exprs, expected):
+        assert self.client.create_one_param_query(param, exprs) == expected
+
+    @pytest.mark.parametrize(
+        "param,exprs,error",
+        [
+            ("created_at", ["lt:not a date"], InvalidValue),
+            ("invalid param", ["xx:whatever"], InvalidParam),
+            ("last_modified", ["xx:whatever"], InvalidValue),
+            ("created_at", [""], InvalidValue),
+        ],
+    )
+    def test_create_one_param_query_with_invalid_input(self, param, exprs, error):
+        with pytest.raises(error):
+            self.client.create_one_param_query(param, exprs)
+
+    @pytest.mark.parametrize(
+        "url_query,expected",
+        [
+            (
+                "/api/messages?created_at=lt:2020",
+                {
+                    "$and": [
+                        {"created_at": {"$lt": datetime(year=2020, month=1, day=1)}}
+                    ]
+                },
+            ),
+            (
+                "/api/messages?last_modified=gt:202011",
+                {
+                    "$and": [
+                        {
+                            "last_modified": {
+                                "$gt": datetime(year=2020, month=11, day=1)
+                            }
+                        }
+                    ]
+                },
+            ),
+            (
+                "/api/messages?created_at=gt:20200625&created_at=lt:202011"
+                + "&last_modified=gt:202012",
+                {
+                    "$and": [
+                        {
+                            "created_at": {
+                                "$gt": datetime(year=2020, month=6, day=25),
+                                "$lt": datetime(year=2020, month=11, day=1),
+                            },
+                        },
+                        {
+                            "last_modified": {
+                                "$gt": datetime(year=2020, month=12, day=1)
+                            },
+                        },
+                    ],
+                },
+            ),
+        ],
+    )
+    def test_create_query_with_valid_input(self, app, url_query, expected):
+        with app.test_request_context(url_query) as ctx:
+            assert self.client.create_query(ctx.request.args) == expected
+
+    @pytest.mark.parametrize(
+        "url_query",
+        [
+            "/api/messages",
+            "/api/messages?a=",
+            "/api/messages?&=a==",
+        ],
+    )
+    def test_create_db_query_with_invalid_params(self, app, url_query):
+        with app.test_request_context(url_query) as ctx:
+            with pytest.raises((InvalidValue, InvalidQuery)):
+                self.client.create_query(ctx.request.args)
+
+    @pytest.mark.parametrize(
+        "param,expected",
+        [
+            ("-param", ("param", pymongo.DESCENDING)),
+            ("param", ("param", pymongo.ASCENDING)),
+        ],
+    )
+    def test_get_sort_param_valid_params(self, param, expected):
+        assert self.client.get_sort_param(param) == expected
+
+    @pytest.mark.parametrize("param", ["-", ""])
+    def test_get_sort_param_invalid_params(self, param):
+        with pytest.raises(InvalidValue):
+            self.client.get_sort_param(param)
+
+    @pytest.mark.parametrize("param,expected", [("3", 3), (None, 0)])
+    def test_get_limit_param_valid_params(self, param, expected):
+        assert self.client.get_limit_param(param) == expected
+
+    @pytest.mark.parametrize("param", ["", "a"])
+    def test_get_limit_param_invalid_params(self, param):
+        with pytest.raises(InvalidValue):
+            self.client.get_limit_param(param)
 
 
 @pytest.mark.parametrize(

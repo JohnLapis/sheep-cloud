@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 from bson.objectid import ObjectId
 
@@ -34,7 +36,7 @@ class TestMessageRoute:
 
         res = client.get(f"/api/messages/{message_id}")
 
-        assert self.message.delete_one({"_id": message_id}).deleted_count == 1
+        assert self.message.delete_one({"_id": message_id}).acknowledged
         assert res.status_code == 200
         message["_id"] = str(message_id)
         assert res.json == message
@@ -54,7 +56,27 @@ class TestMessageRoute:
         res = client.get(f"/api/messages/{id}")
 
         assert res.status_code == 400
-        assert res.data == b"id is invalid."
+        assert res.json["error"] == "InvalidId"
+
+    def test_get_message_using_params(self, client):
+        messages = [
+            {"text": "text", "created_at": datetime.now()},
+            {"text": "text", "created_at": datetime.now()},
+        ]
+        inserted_ids = set(
+            map(str, self.message.insert_many(messages).inserted_ids)
+        )
+
+        today = datetime.now().strftime("%Y%m%d")  # YYYYMMDD
+
+        res = client.get(
+            f"/api/messages?created_at=gt:{today}&sort=-created_at&limit=2"
+        )
+
+        assert res.status_code == 200
+        assert set([m["_id"] for m in res.json["messages"]]) == inserted_ids
+        for id in inserted_ids:
+            assert self.message.delete_one({"_id": id}).acknowledged
 
     def test_post_message(self, client):
         message = {"text": "test post message", "title": "test post title"}

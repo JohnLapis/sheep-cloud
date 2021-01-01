@@ -4,7 +4,7 @@ TEXT_MAX_LENGTH = 50_000
 TITLE_MAX_LENGTH = 50
 
 
-class MessageValidationError(Exception):
+class InvalidMessage(Exception):
     pass
 
 
@@ -28,4 +28,4 @@ def create_message(*, text, title=None):
         message["last_modified"] = now()
         return message
     except AssertionError:
-        raise MessageValidationError
+        raise InvalidMessage("Message is invalid.")

@@ -7,7 +7,7 @@ LATEST_VERSION = "v1"
 
 app = Flask(__name__)
 
-exceptions.setup_url_rules(app)
+exceptions.setup_error_handlers(app)
 
 views.setup_views(db=DatabaseClient())
 views = views.get_views()

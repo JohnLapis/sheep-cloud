@@ -3,6 +3,7 @@ from functools import wraps
 from bson.objectid import ObjectId
 from flask import abort, request
 from flask.views import MethodView
+from werkzeug.datastructures import MultiDict
 
 from ..entities.message import create_message, create_partial_message
 
@@ -15,8 +16,8 @@ def handle_message(view):
     @wraps(view)
     def wrapper(*args, **kwargs):
         res = view(*args, **kwargs)
-        if type(res) is list:
-            return list(map(serialize_id, res))
+        if res.get("messages"):
+            return {"messages": list(map(serialize_id, res["messages"]))}
         else:
             return serialize_id(res)
 
@@ -31,8 +32,21 @@ class MessageView(MethodView):
     @handle_message
     def get(self, id=None):
         if id is None:
-            # request.args
-            pass
+            url_query = MultiDict(request.args)
+            limit_param = self.db.get_limit_param(
+                url_query.pop("limit", default=None)
+            )
+            sorting_params = [
+                self.db.get_sort_param(param)
+                for param in url_query.poplist("sort") or ["last_modified"]
+            ]
+            query = self.db.create_query(url_query)
+            messages = (
+                self.db.message.find(query).sort(sorting_params).limit(limit_param)
+            )
+            if not messages:
+                abort(404)
+            return {"messages": messages}
         else:
             message = self.db.message.find_one(ObjectId(id))
             if not message:
