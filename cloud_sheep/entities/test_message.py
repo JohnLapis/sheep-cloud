@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from .message import create_message
+from .message import InvalidMessage, create_message
 
 
 def test_instantiation_with_title():
@@ -33,7 +33,7 @@ def test_instantiation_with_text_larger_than_max():
         def __len__(self):
             return 100_000
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(InvalidMessage):
         create_message(text=MockText())
 
 
@@ -42,5 +42,5 @@ def test_instantiation_with_title_larger_than_max():
         def __len__(self):
             return 100_000
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(InvalidMessage):
         create_message(text="", title=MockTitle())
