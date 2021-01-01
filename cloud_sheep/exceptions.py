@@ -11,7 +11,7 @@ class InvalidValue(Exception):
     pass
 
 
-def setup_url_rules(app):
+def setup_error_handlers(app):
     @app.errorhandler(InvalidId)
     def invalid_id(error):
         return "id is invalid.", 400
