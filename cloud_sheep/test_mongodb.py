@@ -2,8 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from .exceptions import InvalidValue, InvalidParam, InvalidQuery
-from .mongodb import convert_to_date, DatabaseClient
+from .exceptions import InvalidParam, InvalidQuery, InvalidValue
+from .mongodb import DatabaseClient, convert_to_date
 
 
 @pytest.fixture
@@ -123,10 +123,7 @@ class TestDatabaseClient:
 
     @pytest.mark.parametrize(
         "param,expected",
-        [
-            ("-param", {"param": -1}),
-            ("param", {"param": 1})
-        ],
+        [("-param", {"param": -1}), ("param", {"param": 1})],
     )
     def test_get_sort_param_valid_params(self, param, expected):
         assert self.client.get_sort_param(param) == expected
@@ -144,6 +141,7 @@ class TestDatabaseClient:
     def test_get_limit_param_invalid_params(self, param):
         with pytest.raises(InvalidValue):
             self.client.get_limit_param(param)
+
 
 @pytest.mark.parametrize(
     "date,expected",

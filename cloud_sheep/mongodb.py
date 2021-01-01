@@ -4,7 +4,8 @@ import re
 from urllib.parse import quote_plus as encode_url
 
 import mongoengine
-from .exceptions import InvalidValue, InvalidQuery
+
+from .exceptions import InvalidQuery, InvalidValue
 from .utils import get_param_type
 
 
