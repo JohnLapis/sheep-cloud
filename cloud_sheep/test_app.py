@@ -53,7 +53,7 @@ class TestMessageRoute:
         res = client.get(f"/api/messages/{id}")
 
         assert res.status_code == 400
-        assert res.data == b"id is invalid."
+        assert res.json['error'] == "InvalidId"
 
     def test_post_message(self, client):
         message = {"text": "test post message", "title": "test post title"}

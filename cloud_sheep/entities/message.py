@@ -28,4 +28,4 @@ def create_message(*, text, title=None):
         message["last_modified"] = now()
         return message
     except AssertionError:
-        raise MessageValidationError
+        raise MessageValidationError("message is is not valid.")

@@ -7,4 +7,4 @@ def get_param_type(param):
     try:
         return PARAM_TYPE_DICT[param]
     except KeyError:
-        raise InvalidParam
+        raise InvalidParam(f"{param} parameter doesn't exist.")
