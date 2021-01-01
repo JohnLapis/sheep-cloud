@@ -56,6 +56,9 @@ class TestMessageRoute:
         res = client.get(f"/api/messages/{id}")
 
         assert res.status_code == 400
+        error_message = (f"'{id}' is not a valid ObjectId, it must be a 12-byte"
+                         " input or a 24-character hex string")
+        assert error_message == res.json["message"]
         assert res.json["error"] == "InvalidId"
 
     def test_get_message_using_params(self, client):
@@ -63,9 +66,7 @@ class TestMessageRoute:
             {"text": "text", "created_at": datetime.now()},
             {"text": "text", "created_at": datetime.now()},
         ]
-        inserted_ids = set(
-            map(str, self.message.insert_many(messages).inserted_ids)
-        )
+        inserted_ids = set(map(str, self.message.insert_many(messages).inserted_ids))
 
         today = datetime.now().strftime("%Y%m%d")  # YYYYMMDD
 
@@ -94,16 +95,21 @@ class TestMessageRoute:
         res = client.post("/api/v1/messages", json=message)
 
         assert res.status_code == 400
-        assert res.data == b"message is invalid."
+        assert res.json["message"] == "Message is invalid."
+        assert res.json["error"] == "InvalidMessage"
 
     def test_post_message_with_too_large_title(self, client):
         from .entities.message import TITLE_MAX_LENGTH
 
-        message = {"text": "test post message", "title": "a" * (TITLE_MAX_LENGTH + 1)}
+        message = {
+            "text": "test post message",
+            "title": "a" * (TITLE_MAX_LENGTH + 1),
+        }
         res = client.post("/api/v1/messages", json=message)
 
         assert res.status_code == 400
-        assert res.data == b"message is invalid."
+        assert res.json["message"] == "Message is invalid."
+        assert res.json["error"] == "InvalidMessage"
 
     def test_post_many_messages(self, client):
         NUM_MESSAGES = 5
