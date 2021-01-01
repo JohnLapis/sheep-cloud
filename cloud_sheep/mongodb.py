@@ -25,8 +25,9 @@ TYPE_CONVERTER_DICT = {
 }
 
 
-def get_type_converter(type):
-    return TYPE_CONVERTER_DICT[type]
+def get_type_converter(param):
+    return TYPE_CONVERTER_DICT[get_param_type(param)]
+
 
 OPERATOR_TABLE = {
     "gt": "$gt",
@@ -34,11 +35,13 @@ OPERATOR_TABLE = {
     "and": "$and",
 }
 
+
 def get_db_op(op):
     try:
         return OPERATOR_TABLE[op]
     except KeyError:
         raise InvalidValue(f"{op} operator doesn't exist.")
+
 
 def get_db_host():
     with open("db_config.json", "r") as f:
@@ -57,19 +60,16 @@ class DatabaseClient:
     def __getattr__(self, name):
         return getattr(self._db, name)
 
-    def create_one_param_query(self, param, values):
-        filters = []
-        for expr in values:
+    def create_one_param_query(self, param, exprs):
+        query_exprs = {}
+        for expr in exprs:
             try:
                 op, value = expr.split(":")
             except ValueError:
                 raise InvalidValue(f"{expr} is not a valid value.")
-            param_type = get_param_type(param)
-            filters.append({
-                get_db_op(op): get_type_converter(param_type)(value)
-            })
+            query_exprs[get_db_op(op)] = get_type_converter(param)(value)
 
-        return {param: filters}
+        return {param: query_exprs}
 
     def create_query(self, query_dict):
         filters = []

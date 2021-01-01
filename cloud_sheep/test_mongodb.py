@@ -28,21 +28,21 @@ class TestDatabaseClient:
             (
                 "created_at",
                 ["lt:2020"],
-                {"created_at": [{"$lt": datetime(year=2020, month=1, day=1)}]},
+                {"created_at": {"$lt": datetime(year=2020, month=1, day=1)}},
             ),
             (
                 "last_modified",
                 ["gt:202012"],
-                {"last_modified": [{"$gt": datetime(year=2020, month=12, day=1)}]},
+                {"last_modified": {"$gt": datetime(year=2020, month=12, day=1)}},
             ),
             (
                 "created_at",
                 ["lt:20201230", "gt:20201229"],
                 {
-                    "created_at": [
-                        {"$lt": datetime(year=2020, month=12, day=30)},
-                        {"$gt": datetime(year=2020, month=12, day=29)},
-                    ]
+                    "created_at": {
+                        "$lt": datetime(year=2020, month=12, day=30),
+                        "$gt": datetime(year=2020, month=12, day=29),
+                    },
                 },
             ),
         ],
@@ -67,7 +67,7 @@ class TestDatabaseClient:
                 "/api/messages?created_at=lt:2020",
                 {
                     "$and": [
-                        {"created_at": [{"$lt": datetime(year=2020, month=1, day=1)}]}
+                        {"created_at": {"$lt": datetime(year=2020, month=1, day=1)}}
                     ]
                 },
             ),
@@ -76,9 +76,9 @@ class TestDatabaseClient:
                 {
                     "$and": [
                         {
-                            "last_modified": [
-                                {"$gt": datetime(year=2020, month=11, day=1)}
-                            ]
+                            "last_modified": {
+                                "$gt": datetime(year=2020, month=11, day=1)
+                            }
                         }
                     ]
                 },
@@ -89,15 +89,15 @@ class TestDatabaseClient:
                 {
                     "$and": [
                         {
-                            "created_at": [
-                                {"$gt": datetime(year=2020, month=6, day=25)},
-                                {"$lt": datetime(year=2020, month=11, day=1)},
-                            ],
+                            "created_at": {
+                                "$gt": datetime(year=2020, month=6, day=25),
+                                "$lt": datetime(year=2020, month=11, day=1),
+                            },
                         },
                         {
-                            "last_modified": [
-                                {"$gt": datetime(year=2020, month=12, day=1)},
-                            ],
+                            "last_modified": {
+                                "$gt": datetime(year=2020, month=12, day=1)
+                            },
                         },
                     ],
                 },
@@ -120,6 +120,7 @@ class TestDatabaseClient:
         with app.test_request_context(url_query) as ctx:
             with pytest.raises((InvalidValue, InvalidQuery)):
                 self.client.create_query(ctx.request.args)
+
 
 @pytest.mark.parametrize(
     "date,expected",
