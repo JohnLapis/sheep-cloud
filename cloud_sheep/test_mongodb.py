@@ -2,7 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from .utils import InvalidDate, convert_to_date
+from .exceptions import InvalidValue
+from .mongodb import convert_to_date
 
 
 @pytest.mark.parametrize(
@@ -31,5 +32,5 @@ def test_convert_to_date_with_valid_input(date, expected):
     ],
 )
 def test_convert_to_date_with_invalid_input(date):
-    with pytest.raises(InvalidDate):
+    with pytest.raises(InvalidValue):
         assert convert_to_date(date)

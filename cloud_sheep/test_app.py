@@ -2,7 +2,7 @@ import pytest
 from bson.objectid import ObjectId
 
 from . import LATEST_VERSION, app
-from .db import conn
+from .mongodb import DatabaseClient
 
 
 @pytest.fixture
@@ -21,20 +21,20 @@ def test_api_route_versioning(client):
 class TestMessageRoute:
     @classmethod
     def setup_class(cls):
-        cls.conn = conn
-        cls.db = cls.conn["cloud-sheep"]["message"]
+        cls.db = DatabaseClient()
+        cls.message = cls.db.message
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
+        cls.db.conn.close()
 
     def test_get_message_using_id(self, client):
         message = {"text": "test get message"}
-        message_id = self.db.insert_one(message).inserted_id
+        message_id = self.message.insert_one(message).inserted_id
 
         res = client.get(f"/api/messages/{message_id}")
 
-        assert self.db.delete_one({"_id": message_id}).deleted_count == 1
+        assert self.message.delete_one({"_id": message_id}).deleted_count == 1
         assert res.status_code == 200
         message["_id"] = str(message_id)
         assert res.json == message
@@ -42,8 +42,8 @@ class TestMessageRoute:
     def test_get_message_using_nonexistent_id(self, client):
         # guarantees id doesn't already exist
         message = {"text": "text"}
-        id = self.db.insert_one(message).inserted_id
-        self.db.delete_one({"_id": id})
+        id = self.message.insert_one(message).inserted_id
+        self.message.delete_one({"_id": id})
 
         res = client.get(f"/api/messages/{id}")
 
@@ -56,13 +56,12 @@ class TestMessageRoute:
         assert res.status_code == 400
         assert res.data == b"id is invalid."
 
-
     def test_post_message(self, client):
         message = {"text": "test post message", "title": "test post title"}
         res = client.post("/api/v1/messages", json=message)
 
         id = ObjectId(res.json["inserted_ids"][0])
-        created_message = self.db.find_one_and_delete({"_id": id})
+        created_message = self.message.find_one_and_delete({"_id": id})
         assert created_message["text"] == message["text"]
         assert created_message["title"] == message["title"]
         assert created_message["size"] == len(message["text"])
@@ -92,7 +91,7 @@ class TestMessageRoute:
 
         assert len(res.json["inserted_ids"]) == NUM_MESSAGES
         for id in res.json["inserted_ids"]:
-            created_message = self.db.find_one_and_delete({"_id": ObjectId(id)})
+            created_message = self.message.find_one_and_delete({"_id": ObjectId(id)})
             matching_messages = [
                 m for m in messages if m["text"] == created_message["text"]
             ]
@@ -103,12 +102,12 @@ class TestMessageRoute:
 
     def test_put_message_using_id(self, client):
         old_message = {"text": "test put text", "title": "test put title"}
-        id = self.db.insert_one(old_message).inserted_id
+        id = self.message.insert_one(old_message).inserted_id
 
         new_text = {"text": "new text"}
         res = client.put(f"/api/v1/messages/{id}", json=new_text)
 
-        updated_message = self.db.find_one_and_delete({"_id": id})
+        updated_message = self.message.find_one_and_delete({"_id": id})
         assert updated_message["text"] == new_text["text"]
         assert updated_message["size"] == len(new_text["text"])
         assert updated_message["title"] == old_message["title"]

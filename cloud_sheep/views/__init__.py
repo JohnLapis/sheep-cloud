@@ -1,6 +1,14 @@
 from .message import MessageView
-from ..db import db
 
-funcs = {
-    "message_view": MessageView.as_view("get_message", db["message"]),
-}
+views = {}
+
+
+def setup_views(*, db):
+    global views
+    views = {
+        "message_view": MessageView.as_view("get_message", db),
+    }
+
+
+def get_views():
+    return views

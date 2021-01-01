@@ -6,6 +6,7 @@ from flask.views import MethodView
 
 from ..entities.message import create_message, create_partial_message
 
+
 def handle_message(view):
     def serialize_id(message):
         message["_id"] = str(message["_id"])
@@ -33,7 +34,7 @@ class MessageView(MethodView):
             # request.args
             pass
         else:
-            message = self.db.find_one(ObjectId(id))
+            message = self.db.message.find_one(ObjectId(id))
             if not message:
                 abort(404)
             return message
@@ -41,11 +42,11 @@ class MessageView(MethodView):
     def post(self):
         if isinstance(request.json, list):
             messages = [create_message(**message) for message in request.json]
-            res = self.db.insert_many(messages)
+            res = self.db.message.insert_many(messages)
             inserted_ids = res.inserted_ids
         else:
             message = create_message(**request.json)
-            res = self.db.insert_one(message)
+            res = self.db.message.insert_one(message)
             inserted_ids = [res.inserted_id]
 
         assert res.acknowledged
@@ -57,7 +58,7 @@ class MessageView(MethodView):
             pass
         else:
             update = create_partial_message(**request.json)
-            res = self.db.update_one({"_id": ObjectId(id)}, {"$set": update})
+            res = self.db.message.update_one({"_id": ObjectId(id)}, {"$set": update})
             assert res.matched_count == 1
 
         assert res.acknowledged
