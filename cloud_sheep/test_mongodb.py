@@ -121,6 +121,29 @@ class TestDatabaseClient:
             with pytest.raises((InvalidValue, InvalidQuery)):
                 self.client.create_query(ctx.request.args)
 
+    @pytest.mark.parametrize(
+        "param,expected",
+        [
+            ("-param", {"param": -1}),
+            ("param", {"param": 1})
+        ],
+    )
+    def test_get_sort_param_valid_params(self, param, expected):
+        assert self.client.get_sort_param(param) == expected
+
+    @pytest.mark.parametrize("param", ["-", ""])
+    def test_get_sort_param_invalid_params(self, param):
+        with pytest.raises(InvalidValue):
+            self.client.get_sort_param(param)
+
+    @pytest.mark.parametrize("param,expected", [("3", 3), (None, 0)])
+    def test_get_limit_param_valid_params(self, param, expected):
+        assert self.client.get_limit_param(param) == expected
+
+    @pytest.mark.parametrize("param", ["", "a"])
+    def test_get_limit_param_invalid_params(self, param):
+        with pytest.raises(InvalidValue):
+            self.client.get_limit_param(param)
 
 @pytest.mark.parametrize(
     "date,expected",

@@ -81,3 +81,22 @@ class DatabaseClient:
             raise InvalidQuery("No parameters were given.")
 
         return {get_db_op("and"): filters}
+
+    def get_sort_param(self, param):
+        try:
+            if param[0] == "-":
+                param = param[1:]
+                direction = -1
+            else:
+                direction = 1
+
+            assert len(param) > 0
+            return {param: direction}
+        except (IndexError, AssertionError):
+            raise InvalidValue("The limit parameter should be a positive integer.")
+
+    def get_limit_param(self, param):
+        try:
+            return 0 if param is None else int(param)
+        except ValueError:
+            raise InvalidValue("The limit parameter should be a positive integer.")
