@@ -23,7 +23,7 @@ class TestDatabaseClient:
         cls.client.conn.close()
 
     @pytest.mark.parametrize(
-        "param,values,expected",
+        "param,exprs,expected",
         [
             (
                 "created_at",
@@ -47,18 +47,21 @@ class TestDatabaseClient:
             ),
         ],
     )
-    def test_create_one_param_query_with_valid_input(self, param, values, expected):
-        assert self.client.create_one_param_query(param, values) == expected
+    def test_create_one_param_query_with_valid_input(self, param, exprs, expected):
+        assert self.client.create_one_param_query(param, exprs) == expected
 
-    def test_create_one_param_query_with_invalid_input(self):
-        with pytest.raises(InvalidValue):
-            self.client.create_one_param_query("created_at", ["lt:not a date"])
-        with pytest.raises(InvalidParam):
-            self.client.create_one_param_query("invalid param", ["xx:whatever"])
-        with pytest.raises(InvalidValue):
-            self.client.create_one_param_query("last_modified", ["xx:whatever"])
-        with pytest.raises(InvalidValue):
-            self.client.create_one_param_query("created_at", [""])
+    @pytest.mark.parametrize(
+        "param,exprs,error",
+        [
+            ("created_at", ["lt:not a date"], InvalidValue),
+            ("invalid param", ["xx:whatever"], InvalidParam),
+            ("last_modified", ["xx:whatever"], InvalidValue),
+            ("created_at", [""], InvalidValue),
+        ],
+    )
+    def test_create_one_param_query_with_invalid_input(self, param, exprs, error):
+        with pytest.raises(error):
+            self.client.create_one_param_query(param, exprs)
 
     @pytest.mark.parametrize(
         "url_query,expected",
