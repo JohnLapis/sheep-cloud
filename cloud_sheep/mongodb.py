@@ -4,6 +4,7 @@ import re
 from urllib.parse import quote_plus as encode_url
 
 import mongoengine
+import pymongo
 
 from .exceptions import InvalidQuery, InvalidValue
 from .utils import get_param_type
@@ -87,12 +88,12 @@ class DatabaseClient:
         try:
             if param[0] == "-":
                 param = param[1:]
-                direction = -1
+                direction = pymongo.DESCENDING
             else:
-                direction = 1
+                direction = pymongo.ASCENDING
 
             assert len(param) > 0
-            return {param: direction}
+            return (param, direction)
         except (IndexError, AssertionError):
             raise InvalidValue("The limit parameter should be a positive integer.")
 

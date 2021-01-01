@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import pymongo
 import pytest
 
 from .exceptions import InvalidParam, InvalidQuery, InvalidValue
@@ -126,7 +127,10 @@ class TestDatabaseClient:
 
     @pytest.mark.parametrize(
         "param,expected",
-        [("-param", {"param": -1}), ("param", {"param": 1})],
+        [
+            ("-param", ("param", pymongo.DESCENDING)),
+            ("param", ("param", pymongo.ASCENDING)),
+        ],
     )
     def test_get_sort_param_valid_params(self, param, expected):
         assert self.client.get_sort_param(param) == expected
