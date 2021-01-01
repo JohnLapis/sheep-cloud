@@ -33,7 +33,7 @@ class TestMessageRoute:
 
         res = client.get(f"/api/messages/{message_id}")
 
-        assert self.message.delete_one({"_id": message_id}).deleted_count == 1
+        assert self.message.delete_one({"_id": message_id}).acknowledged
         assert res.status_code == 200
         message["_id"] = str(message_id)
         assert res.json == message
