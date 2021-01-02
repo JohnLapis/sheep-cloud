@@ -1,22 +1,13 @@
 from bson.errors import InvalidId
 
 from .entities.message import InvalidMessage
-
-
-class InvalidParam(Exception):
-    pass
-
-
-class InvalidValue(Exception):
-    pass
-
-
-class InvalidQuery(Exception):
-    pass
+from .entities.param import InvalidExpression, InvalidParam
+from .mongodb import InvalidQuery, InvalidValue
 
 
 def setup_error_handlers(app):
     @app.errorhandler(InvalidMessage)
+    @app.errorhandler(InvalidExpression)
     @app.errorhandler(InvalidParam)
     @app.errorhandler(InvalidValue)
     @app.errorhandler(InvalidQuery)

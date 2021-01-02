@@ -3,8 +3,8 @@ from datetime import datetime
 import pymongo
 import pytest
 
-from .exceptions import InvalidParam, InvalidQuery, InvalidValue
-from .mongodb import DatabaseClient, convert_to_date
+from .entities.param import InvalidExpression, InvalidParam
+from .mongodb import DatabaseClient, InvalidQuery, InvalidValue, convert_to_date
 
 
 @pytest.fixture
@@ -57,7 +57,7 @@ class TestDatabaseClient:
             ("created_at", ["lt:not a date"], InvalidValue),
             ("invalid param", ["xx:whatever"], InvalidParam),
             ("last_modified", ["xx:whatever"], InvalidValue),
-            ("created_at", [""], InvalidValue),
+            ("created_at", [""], InvalidExpression),
         ],
     )
     def test_create_one_param_query_with_invalid_input(self, param, exprs, error):
@@ -113,16 +113,17 @@ class TestDatabaseClient:
             assert self.client.create_query(ctx.request.args) == expected
 
     @pytest.mark.parametrize(
-        "url_query",
+        "url_query,error",
         [
-            "/api/messages",
-            "/api/messages?a=",
-            "/api/messages?&=a==",
+            ("/api/messages", InvalidQuery),
+            ("/api/messages?a=", InvalidParam),
+            ("/api/messages?&=a==", InvalidParam),
+            ("/api/messages?created_at=5", InvalidExpression),
         ],
     )
-    def test_create_db_query_with_invalid_input(self, app, url_query):
+    def test_create_db_query_with_invalid_input(self, app, url_query, error):
         with app.test_request_context(url_query) as ctx:
-            with pytest.raises((InvalidValue, InvalidQuery)):
+            with pytest.raises(error):
                 self.client.create_query(ctx.request.args)
 
     @pytest.mark.parametrize(

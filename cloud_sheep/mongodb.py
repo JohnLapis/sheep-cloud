@@ -6,8 +6,15 @@ from urllib.parse import quote_plus as encode_url
 import mongoengine
 import pymongo
 
-from .exceptions import InvalidQuery, InvalidValue
-from .utils import get_param_type
+from .entities.param import get_param_type, parse_param_expr
+
+
+class InvalidQuery(Exception):
+    pass
+
+
+class InvalidValue(Exception):
+    pass
 
 
 def convert_to_date(value):
@@ -65,10 +72,7 @@ class DatabaseClient:
     def create_one_param_query(self, param, exprs):
         query_exprs = {}
         for expr in exprs:
-            try:
-                op, value = expr.split(":")
-            except ValueError:
-                raise InvalidValue(f"{expr} is not a valid value.")
+            op, value = parse_param_expr(param, expr)
             query_exprs[get_db_op(op)] = get_type_converter(param)(value)
 
         return {param: query_exprs}
