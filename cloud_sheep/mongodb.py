@@ -70,13 +70,13 @@ class DatabaseClient:
     def __getattr__(self, name):
         return getattr(self._db, name)
 
-    def create_one_param_query(self, param, exprs):
-        query_exprs = {}
+    def create_generic_query(self, param, exprs):
+        operations = {}
         for expr in exprs:
             op, value = parse_param_expr(param, expr)
-            query_exprs[get_db_op(op)] = get_type_converter(param)(value)
+            operations[get_db_op(op)] = get_type_converter(param)(value)
 
-        return {param: query_exprs}
+        return {param: operations}
 
     def create_query(self, query_dict):
         filters = []
