@@ -26,7 +26,7 @@ def handle_message(view):
 
 class MessageView(MethodView):
     def __init__(self, db):
-        super()
+        super().__init__()
         self.db = db
 
     @handle_message
