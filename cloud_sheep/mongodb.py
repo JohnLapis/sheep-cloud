@@ -31,6 +31,7 @@ def convert_to_date(value):
 
 TYPE_CONVERTER_DICT = {
     "date": convert_to_date,
+    "text": str,
 }
 
 

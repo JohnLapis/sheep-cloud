@@ -18,10 +18,20 @@ class DateParam(Param):
     def parse(self, expr):
         return expr.split(":")
 
+class TextParam(Param):
+    def __init__(self):
+        super().__init__("text")
+
+    def parse(self, expr):
+        return expr.split(":")
+
 
 PARAM_DICT = {
     "created_at": DateParam(),
     "last_modified": DateParam(),
+    "title": TextParam(),
+    "text": TextParam(),
+    "q": TextParam(),
 }
 
 
