@@ -120,7 +120,7 @@ class TestDatabaseClient:
             "/api/messages?&=a==",
         ],
     )
-    def test_create_db_query_with_invalid_params(self, app, url_query):
+    def test_create_db_query_with_invalid_input(self, app, url_query):
         with app.test_request_context(url_query) as ctx:
             with pytest.raises((InvalidValue, InvalidQuery)):
                 self.client.create_query(ctx.request.args)
