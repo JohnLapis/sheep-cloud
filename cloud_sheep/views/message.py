@@ -54,8 +54,8 @@ class MessageView(MethodView):
             return message
 
     def post(self):
-        if isinstance(request.json, list):
-            messages = [create_message(**message) for message in request.json]
+        if type(request.json) == list:
+            messages = [create_message(**m) for m in request.json]
             res = self.db.message.insert_many(messages)
             inserted_ids = res.inserted_ids
         else:
