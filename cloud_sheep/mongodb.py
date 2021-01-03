@@ -54,6 +54,7 @@ OPERATOR_TABLE = {
     "language": "$language",
     "case_sensitivity": "$caseSensitive",
     "diacritic_sensitivity": "$diacriticSensitive",
+    "set": "$set",
 }
 
 
@@ -113,6 +114,12 @@ class DatabaseClient:
                 get_db_op("diacritic_sensitivity"): "d" in flags,
             }
         }
+
+    def create_update_query(self, update):
+        try:
+            return {get_db_op("set"): {**update}}
+        except TypeError:
+            raise InvalidValue('"update" value is not a dictionary.')
 
     def get_sort_param(self, param):
         try:
