@@ -5,7 +5,13 @@ import pytest
 from werkzeug.datastructures import MultiDict
 
 from .entities.param import InvalidExpression, InvalidParam
-from .mongodb import DatabaseClient, InvalidQuery, InvalidValue, convert_to_date
+from .mongodb import (
+    DatabaseClient,
+    InvalidOperator,
+    InvalidQuery,
+    InvalidValue,
+    convert_to_date,
+)
 
 
 @pytest.fixture
@@ -68,6 +74,7 @@ class TestDatabaseClient:
             ("created_at", ["lt:not a date"], InvalidValue),
             ("invalid param", ["xx:whatever"], InvalidParam),
             ("last_modified", ["xx:whatever"], InvalidValue),
+            ("last_modified", ["xx:20200202"], InvalidOperator),
             ("created_at", [""], InvalidExpression),
         ],
     )

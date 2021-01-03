@@ -17,6 +17,10 @@ class InvalidValue(Exception):
     pass
 
 
+class InvalidOperator(Exception):
+    pass
+
+
 def convert_to_date(value):
     try:
         PATTERN = re.compile(r"^(?P<year>\d{4})(?P<month>\d{2})?(?P<day>\d{2})?$")
@@ -57,7 +61,7 @@ def get_db_op(op):
     try:
         return OPERATOR_TABLE[op]
     except KeyError:
-        raise InvalidValue(f"{op} operator doesn't exist.")
+        raise InvalidOperator(f"{op} operator doesn't exist.")
 
 
 def get_db_host():
