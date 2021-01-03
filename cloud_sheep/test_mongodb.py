@@ -3,6 +3,7 @@ from datetime import datetime
 import pymongo
 import pytest
 from werkzeug.datastructures import MultiDict
+from werkzeug.exceptions import BadRequestKeyError
 
 from .entities.param import InvalidExpression, InvalidParam
 from .mongodb import (
@@ -157,6 +158,7 @@ class TestDatabaseClient:
             ("/api/messages?a=", InvalidParam),
             ("/api/messages?&=a==", InvalidParam),
             ("/api/messages?created_at=5", InvalidExpression),
+            ("/api/messages?created_at=:20201010", InvalidOperator),
         ],
     )
     def test_create_query_with_invalid_input(self, app, url_query, error):
@@ -190,6 +192,17 @@ class TestDatabaseClient:
                 },
             ),
             (
+                "/api/message?q=:some text search",
+                {
+                    "$text": {
+                        "$search": "some text search",
+                        "$language": "none",
+                        "$caseSensitive": False,
+                        "$diacriticSensitive": False,
+                    }
+                },
+            ),
+            (
                 "/api/message?q=some text search",
                 {
                     "$text": {
@@ -209,9 +222,16 @@ class TestDatabaseClient:
                 == expected
             )
 
-    @pytest.mark.skip
+    @pytest.mark.parametrize(
+        "url_query,error",
+        [
+            ("/api/message?notq=anything", BadRequestKeyError),
+        ],
+    )
     def test_create_text_query_with_invalid_input(self, app, url_query, error):
-        pass
+        with app.test_request_context(url_query) as ctx:
+            with pytest.raises(error):
+                self.client.create_text_query(MultiDict(ctx.request.args))
 
     @pytest.mark.parametrize(
         "param,expected",
