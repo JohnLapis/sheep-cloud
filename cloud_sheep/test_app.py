@@ -56,8 +56,10 @@ class TestMessageRoute:
         res = client.get(f"/api/messages/{id}")
 
         assert res.status_code == 400
-        error_message = (f"'{id}' is not a valid ObjectId, it must be a 12-byte"
-                         " input or a 24-character hex string")
+        error_message = (
+            f"'{id}' is not a valid ObjectId, it must be a 12-byte"
+            " input or a 24-character hex string"
+        )
         assert error_message == res.json["message"]
         assert res.json["error"] == "InvalidId"
 
