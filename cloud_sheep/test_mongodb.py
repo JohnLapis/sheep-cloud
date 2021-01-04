@@ -147,9 +147,9 @@ class TestDatabaseClient:
             ),
         ],
     )
-    def test_create_query_with_valid_input(self, app, url_query, expected):
+    def test_create_query_from_dict_with_valid_input(self, app, url_query, expected):
         with app.test_request_context(url_query) as ctx:
-            assert self.client.create_query(MultiDict(ctx.request.args)) == expected
+            assert self.client.create_query_from_dict(MultiDict(ctx.request.args)) == expected
 
     @pytest.mark.parametrize(
         "url_query,error",
@@ -161,10 +161,10 @@ class TestDatabaseClient:
             ("/api/messages?created_at=:20201010", InvalidOperator),
         ],
     )
-    def test_create_query_with_invalid_input(self, app, url_query, error):
+    def test_create_query_from_dict_with_invalid_input(self, app, url_query, error):
         with app.test_request_context(url_query) as ctx:
             with pytest.raises(error):
-                self.client.create_query(MultiDict(ctx.request.args))
+                self.client.create_query_from_dict(MultiDict(ctx.request.args))
 
     @pytest.mark.parametrize(
         "url_query,expected",

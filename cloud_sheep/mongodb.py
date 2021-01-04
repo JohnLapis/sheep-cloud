@@ -90,7 +90,7 @@ class DatabaseClient:
 
         return {param: operations}
 
-    def create_query(self, query_dict):
+    def create_query_from_dict(self, query_dict):
         subqueries = []
         if "q" in query_dict:
             subqueries.append(self.create_text_query(query_dict))

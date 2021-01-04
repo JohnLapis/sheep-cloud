@@ -40,7 +40,7 @@ class MessageView(MethodView):
                 self.db.get_sort_param(param)
                 for param in url_query.poplist("sort") or ["last_modified"]
             ]
-            query = self.db.create_query(url_query)
+            query = self.db.create_query_from_dict(url_query)
             messages = (
                 self.db.message.find(query).sort(sorting_params).limit(limit_param)
             )
