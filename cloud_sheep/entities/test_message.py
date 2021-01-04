@@ -2,45 +2,80 @@ from datetime import datetime
 
 import pytest
 
-from .message import InvalidMessage, create_message
+from .message import (
+    TEXT_MAX_LENGTH,
+    TITLE_MAX_LENGTH,
+    InvalidMessage,
+    create_message,
+    create_message_update,
+)
 
 
-def test_instantiation_with_title():
-    params = {"title": "test title", "text": "test text"}
-    message = create_message(**params)
-
-    assert message["text"] == params["text"]
-    assert message["size"] == len(params["text"])
-    assert message["title"] == params["title"]
-    assert isinstance(message["last_modified"], datetime)
-    assert isinstance(message["created_at"], datetime)
+class TooLongText(str):
+    def __len__(self):
+        return TEXT_MAX_LENGTH + 1
 
 
-def test_instantiation_without_title():
-    params = {"text": "test text"}
-    message = create_message(**params)
-
-    assert message["text"] == params["text"]
-    assert message["size"] == len(params["text"])
-    with pytest.raises(KeyError):
-        message["title"]
-    assert isinstance(message["last_modified"], datetime)
-    assert isinstance(message["created_at"], datetime)
+class TooLongTitle(str):
+    def __len__(self):
+        return TITLE_MAX_LENGTH + 1
 
 
-def test_instantiation_with_text_larger_than_max():
-    class MockText(str):
-        def __len__(self):
-            return 100_000
+@pytest.mark.parametrize(
+    "message",
+    [
+        {"text": "text"},
+        {"text": "text", "title": "title"},
+    ],
+)
+def test_create_message_with_valid_input(message):
+    created_message = create_message(**message)
 
-    with pytest.raises(InvalidMessage):
-        create_message(text=MockText())
+    assert created_message["text"] == message["text"]
+    if "title" in message:
+        assert created_message["title"] == message["title"]
+    assert type(created_message["created_at"]) == datetime
+    assert created_message["created_at"] == created_message["last_modified"]
+
+    for key in ["text", "title", "created_at", "last_modified"]:
+        if key in created_message:
+            created_message.pop(key)
+    assert len(created_message) == 0
 
 
-def test_instantiation_with_title_larger_than_max():
-    class MockTitle(str):
-        def __len__(self):
-            return 100_000
+@pytest.mark.parametrize(
+    "message",
+    [
+        {},
+        {"text": "text", "a": "a"},
+        {"title": "title"},
+        {"text": "text", "created_at": datetime.now()},
+    ],
+)
+def test_create_message_with_wrong_params(message):
+    with pytest.raises(InvalidMessage, match="Message is not valid."):
+        create_message(**message)
 
-    with pytest.raises(InvalidMessage):
-        create_message(text="", title=MockTitle())
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        {"text": False},
+        {"text": TooLongText()},
+    ],
+)
+def test_create_message_with_invalid_text(message):
+    with pytest.raises(InvalidMessage, match="Message's text is not valid."):
+        create_message(**message)
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        {"text": "text", "title": 5},
+        {"text": "text", "title": TooLongTitle()},
+    ],
+)
+def test_create_message_with_invalid_title(message):
+    with pytest.raises(InvalidMessage, match="Message's title is not valid."):
+        create_message(**message)

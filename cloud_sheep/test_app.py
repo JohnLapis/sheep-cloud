@@ -87,7 +87,6 @@ class TestMessageRoute:
         created_message = self.message.find_one_and_delete({"_id": id})
         assert created_message["text"] == message["text"]
         assert created_message["title"] == message["title"]
-        assert created_message["size"] == len(message["text"])
         assert res.status_code == 201
 
     def test_post_message_with_invalid_text(self, client):
@@ -95,7 +94,7 @@ class TestMessageRoute:
         res = client.post("/api/v1/messages", json=message)
 
         assert res.status_code == 400
-        assert res.json["message"] == "Message is invalid."
+        assert res.json["message"] == "Message's text is not valid."
         assert res.json["error"] == "InvalidMessage"
 
     def test_post_message_with_too_large_title(self, client):
@@ -108,7 +107,7 @@ class TestMessageRoute:
         res = client.post("/api/v1/messages", json=message)
 
         assert res.status_code == 400
-        assert res.json["message"] == "Message is invalid."
+        assert res.json["message"] == "Message's title is not valid."
         assert res.json["error"] == "InvalidMessage"
 
     def test_post_many_messages(self, client):
@@ -124,7 +123,6 @@ class TestMessageRoute:
                 m for m in messages if m["text"] == created_message["text"]
             ]
             assert len(matching_messages) == 1
-            assert created_message["size"] == len(matching_messages[0]["text"])
 
         assert res.status_code == 201
 
@@ -137,6 +135,5 @@ class TestMessageRoute:
 
         updated_message = self.message.find_one_and_delete({"_id": id})
         assert updated_message["text"] == new_text["text"]
-        assert updated_message["size"] == len(new_text["text"])
         assert updated_message["title"] == old_message["title"]
         assert res.status_code == 201 and res.json["modified_count"] == 1
