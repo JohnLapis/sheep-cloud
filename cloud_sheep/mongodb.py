@@ -6,8 +6,19 @@ from urllib.parse import quote_plus as encode_url
 import mongoengine
 import pymongo
 
-from .exceptions import InvalidQuery, InvalidValue
-from .utils import get_param_type
+from .entities.param import get_param_type, parse_param_expr
+
+
+class InvalidQuery(Exception):
+    pass
+
+
+class InvalidValue(Exception):
+    pass
+
+
+class InvalidOperator(Exception):
+    pass
 
 
 def convert_to_date(value):
@@ -24,6 +35,7 @@ def convert_to_date(value):
 
 TYPE_CONVERTER_DICT = {
     "date": convert_to_date,
+    "text": str,
 }
 
 
@@ -35,6 +47,14 @@ OPERATOR_TABLE = {
     "gt": "$gt",
     "lt": "$lt",
     "and": "$and",
+    "text": "$text",
+    "rg": "$regex",
+    "op": "$options",
+    "search": "$search",
+    "language": "$language",
+    "case_sensitivity": "$caseSensitive",
+    "diacritic_sensitivity": "$diacriticSensitive",
+    "set": "$set",
 }
 
 
@@ -42,7 +62,7 @@ def get_db_op(op):
     try:
         return OPERATOR_TABLE[op]
     except KeyError:
-        raise InvalidValue(f"{op} operator doesn't exist.")
+        raise InvalidOperator(f"{op} operator doesn't exist.")
 
 
 def get_db_host():
@@ -62,27 +82,44 @@ class DatabaseClient:
     def __getattr__(self, name):
         return getattr(self._db, name)
 
-    def create_one_param_query(self, param, exprs):
-        query_exprs = {}
+    def create_param_query(self, param, exprs):
+        operations = {}
         for expr in exprs:
-            try:
-                op, value = expr.split(":")
-            except ValueError:
-                raise InvalidValue(f"{expr} is not a valid value.")
-            query_exprs[get_db_op(op)] = get_type_converter(param)(value)
+            op, value = parse_param_expr(param, expr)
+            operations[get_db_op(op)] = get_type_converter(param)(value)
 
-        return {param: query_exprs}
+        return {param: operations}
 
-    def create_query(self, query_dict):
-        filters = []
+    def create_query_from_dict(self, query_dict):
+        subqueries = []
+        if "q" in query_dict:
+            subqueries.append(self.create_text_query(query_dict))
+
         for param in query_dict.keys():
             values = query_dict.getlist(param)
-            filters.append(self.create_one_param_query(param, values))
+            subqueries.append(self.create_param_query(param, values))
 
-        if not filters:
+        if not subqueries:
             raise InvalidQuery("No parameters were given.")
 
-        return {get_db_op("and"): filters}
+        return {get_db_op("and"): subqueries}
+
+    def create_text_query(self, query_dict):
+        flags, text = parse_param_expr("q", query_dict.pop("q"))
+        return {
+            get_db_op("text"): {
+                get_db_op("search"): text,
+                get_db_op("language"): query_dict.pop("lang", default="none"),
+                get_db_op("case_sensitivity"): "c" in flags,
+                get_db_op("diacritic_sensitivity"): "d" in flags,
+            }
+        }
+
+    def create_update_query(self, update):
+        try:
+            return {get_db_op("set"): {**update}}
+        except TypeError:
+            raise InvalidValue('"update" value is not a dictionary.')
 
     def get_sort_param(self, param):
         try:

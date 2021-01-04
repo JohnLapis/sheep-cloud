@@ -2,9 +2,17 @@ from datetime import datetime
 
 import pymongo
 import pytest
+from werkzeug.datastructures import MultiDict
+from werkzeug.exceptions import BadRequestKeyError
 
-from .exceptions import InvalidParam, InvalidQuery, InvalidValue
-from .mongodb import DatabaseClient, convert_to_date
+from .entities.param import InvalidExpression, InvalidParam
+from .mongodb import (
+    DatabaseClient,
+    InvalidOperator,
+    InvalidQuery,
+    InvalidValue,
+    convert_to_date,
+)
 
 
 @pytest.fixture
@@ -46,10 +54,20 @@ class TestDatabaseClient:
                     },
                 },
             ),
+            (
+                "title",
+                ["rg:some regular expression", "op:ims"],
+                {
+                    "title": {
+                        "$regex": "some regular expression",
+                        "$options": "ims",
+                    },
+                },
+            ),
         ],
     )
-    def test_create_one_param_query_with_valid_input(self, param, exprs, expected):
-        assert self.client.create_one_param_query(param, exprs) == expected
+    def test_create_param_query_with_valid_input(self, param, exprs, expected):
+        assert self.client.create_param_query(param, exprs) == expected
 
     @pytest.mark.parametrize(
         "param,exprs,error",
@@ -57,12 +75,13 @@ class TestDatabaseClient:
             ("created_at", ["lt:not a date"], InvalidValue),
             ("invalid param", ["xx:whatever"], InvalidParam),
             ("last_modified", ["xx:whatever"], InvalidValue),
-            ("created_at", [""], InvalidValue),
+            ("last_modified", ["xx:20200202"], InvalidOperator),
+            ("created_at", [""], InvalidExpression),
         ],
     )
-    def test_create_one_param_query_with_invalid_input(self, param, exprs, error):
+    def test_create_param_query_with_invalid_input(self, param, exprs, error):
         with pytest.raises(error):
-            self.client.create_one_param_query(param, exprs)
+            self.client.create_param_query(param, exprs)
 
     @pytest.mark.parametrize(
         "url_query,expected",
@@ -106,24 +125,124 @@ class TestDatabaseClient:
                     ],
                 },
             ),
+            (
+                "/api/message?q=c:some text search&lang=en&created_at=gt:20210101",
+                {
+                    "$and": [
+                        {
+                            "$text": {
+                                "$search": "some text search",
+                                "$language": "en",
+                                "$caseSensitive": True,
+                                "$diacriticSensitive": False,
+                            },
+                        },
+                        {
+                            "created_at": {
+                                "$gt": datetime(year=2021, month=1, day=1)
+                            },
+                        },
+                    ],
+                },
+            ),
         ],
     )
-    def test_create_query_with_valid_input(self, app, url_query, expected):
+    def test_create_query_from_dict_with_valid_input(self, app, url_query, expected):
         with app.test_request_context(url_query) as ctx:
-            assert self.client.create_query(ctx.request.args) == expected
+            assert self.client.create_query_from_dict(MultiDict(ctx.request.args)) == expected
 
     @pytest.mark.parametrize(
-        "url_query",
+        "url_query,error",
         [
-            "/api/messages",
-            "/api/messages?a=",
-            "/api/messages?&=a==",
+            ("/api/messages", InvalidQuery),
+            ("/api/messages?a=", InvalidParam),
+            ("/api/messages?&=a==", InvalidParam),
+            ("/api/messages?created_at=5", InvalidExpression),
+            ("/api/messages?created_at=:20201010", InvalidOperator),
         ],
     )
-    def test_create_db_query_with_invalid_input(self, app, url_query):
+    def test_create_query_from_dict_with_invalid_input(self, app, url_query, error):
         with app.test_request_context(url_query) as ctx:
-            with pytest.raises((InvalidValue, InvalidQuery)):
-                self.client.create_query(ctx.request.args)
+            with pytest.raises(error):
+                self.client.create_query_from_dict(MultiDict(ctx.request.args))
+
+    @pytest.mark.parametrize(
+        "url_query,expected",
+        [
+            (
+                "/api/message?q=c:some text search&lang=en",
+                {
+                    "$text": {
+                        "$search": "some text search",
+                        "$language": "en",
+                        "$caseSensitive": True,
+                        "$diacriticSensitive": False,
+                    }
+                },
+            ),
+            (
+                "/api/message?q=d:some text search",
+                {
+                    "$text": {
+                        "$search": "some text search",
+                        "$language": "none",
+                        "$caseSensitive": False,
+                        "$diacriticSensitive": True,
+                    }
+                },
+            ),
+            (
+                "/api/message?q=:some text search",
+                {
+                    "$text": {
+                        "$search": "some text search",
+                        "$language": "none",
+                        "$caseSensitive": False,
+                        "$diacriticSensitive": False,
+                    }
+                },
+            ),
+            (
+                "/api/message?q=some text search",
+                {
+                    "$text": {
+                        "$search": "some text search",
+                        "$language": "none",
+                        "$caseSensitive": False,
+                        "$diacriticSensitive": False,
+                    }
+                },
+            ),
+        ],
+    )
+    def test_create_text_query_with_valid_input(self, app, url_query, expected):
+        with app.test_request_context(url_query) as ctx:
+            assert (
+                self.client.create_text_query(MultiDict(ctx.request.args))
+                == expected
+            )
+
+    @pytest.mark.parametrize(
+        "url_query,error",
+        [
+            ("/api/message?notq=anything", BadRequestKeyError),
+        ],
+    )
+    def test_create_text_query_with_invalid_input(self, app, url_query, error):
+        with app.test_request_context(url_query) as ctx:
+            with pytest.raises(error):
+                self.client.create_text_query(MultiDict(ctx.request.args))
+
+    @pytest.mark.only
+    @pytest.mark.parametrize("update,expected", [({"a": "b"}, {"$set": {"a": "b"}})])
+    def test_create_update_query_with_valid_input(self, app, update, expected):
+        assert self.client.create_update_query(update) == expected
+
+    @pytest.mark.only
+    @pytest.mark.parametrize("update,error", [([], InvalidValue)])
+    def test_create_update_query_with_invalid_input(self, app, update, error):
+        with pytest.raises(error):
+            self.client.create_update_query(update)
 
     @pytest.mark.parametrize(
         "param,expected",

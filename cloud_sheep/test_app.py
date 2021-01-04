@@ -1,9 +1,12 @@
+import random
+import re
 from datetime import datetime
 
 import pytest
 from bson.objectid import ObjectId
 
 from . import LATEST_VERSION, app
+from .entities.message import create_message
 from .mongodb import DatabaseClient
 
 
@@ -11,6 +14,11 @@ from .mongodb import DatabaseClient
 def client():
     with app.test_client() as client:
         yield client
+
+
+def get_random_string(length):
+    letters = "abcdefghijklmnopqrstuvwxyz"
+    return "".join(random.choice(letters) for i in range(length))
 
 
 def test_api_route_versioning(client):
@@ -31,7 +39,7 @@ class TestMessageRoute:
         cls.db.conn.close()
 
     def test_get_message_using_id(self, client):
-        message = {"text": "test get message"}
+        message = create_message(text="test get message")
         message_id = self.message.insert_one(message).inserted_id
 
         res = client.get(f"/api/messages/{message_id}")
@@ -39,11 +47,17 @@ class TestMessageRoute:
         assert self.message.delete_one({"_id": message_id}).acknowledged
         assert res.status_code == 200
         message["_id"] = str(message_id)
-        assert res.json == message
+        assert res.json["text"] == message["text"]
+
+        # timezone (%Z) is ignored
+        timeformat = "%a, %d %b %Y %H:%M:%S"
+        assert re.match(
+            message["created_at"].strftime(timeformat), res.json["created_at"]
+        )
 
     def test_get_message_using_nonexistent_id(self, client):
         # guarantees id doesn't already exist
-        message = {"text": "text"}
+        message = create_message(text="text")
         id = self.message.insert_one(message).inserted_id
         self.message.delete_one({"_id": id})
 
@@ -56,19 +70,24 @@ class TestMessageRoute:
         res = client.get(f"/api/messages/{id}")
 
         assert res.status_code == 400
-        error_message = (f"'{id}' is not a valid ObjectId, it must be a 12-byte"
-                         " input or a 24-character hex string")
+        error_message = (
+            f"'{id}' is not a valid ObjectId, it must be a 12-byte"
+            " input or a 24-character hex string"
+        )
         assert error_message == res.json["message"]
         assert res.json["error"] == "InvalidId"
 
     def test_get_message_using_params(self, client):
+        # the messages have the attr "created_at" set to the current date
         messages = [
-            {"text": "text", "created_at": datetime.now()},
-            {"text": "text", "created_at": datetime.now()},
+            create_message(text="text1"),
+            create_message(text="text2"),
         ]
-        inserted_ids = set(map(str, self.message.insert_many(messages).inserted_ids))
+        inserted_ids = set(
+            [str(m) for m in self.message.insert_many(messages).inserted_ids]
+        )
 
-        today = datetime.now().strftime("%Y%m%d")  # YYYYMMDD
+        today = datetime.now().strftime("%Y%m%d") # YYYYMMDD
 
         res = client.get(
             f"/api/messages?created_at=gt:{today}&sort=-created_at&limit=2"
@@ -87,7 +106,6 @@ class TestMessageRoute:
         created_message = self.message.find_one_and_delete({"_id": id})
         assert created_message["text"] == message["text"]
         assert created_message["title"] == message["title"]
-        assert created_message["size"] == len(message["text"])
         assert res.status_code == 201
 
     def test_post_message_with_invalid_text(self, client):
@@ -95,20 +113,7 @@ class TestMessageRoute:
         res = client.post("/api/v1/messages", json=message)
 
         assert res.status_code == 400
-        assert res.json["message"] == "Message is invalid."
-        assert res.json["error"] == "InvalidMessage"
-
-    def test_post_message_with_too_large_title(self, client):
-        from .entities.message import TITLE_MAX_LENGTH
-
-        message = {
-            "text": "test post message",
-            "title": "a" * (TITLE_MAX_LENGTH + 1),
-        }
-        res = client.post("/api/v1/messages", json=message)
-
-        assert res.status_code == 400
-        assert res.json["message"] == "Message is invalid."
+        assert res.json["message"] == "Message's text is not valid."
         assert res.json["error"] == "InvalidMessage"
 
     def test_post_many_messages(self, client):
@@ -124,7 +129,6 @@ class TestMessageRoute:
                 m for m in messages if m["text"] == created_message["text"]
             ]
             assert len(matching_messages) == 1
-            assert created_message["size"] == len(matching_messages[0]["text"])
 
         assert res.status_code == 201
 
@@ -132,11 +136,56 @@ class TestMessageRoute:
         old_message = {"text": "test put text", "title": "test put title"}
         id = self.message.insert_one(old_message).inserted_id
 
-        new_text = {"text": "new text"}
-        res = client.put(f"/api/v1/messages/{id}", json=new_text)
+        update = {"text": "new text"}
+        res = client.put(f"/api/v1/messages/{id}", json=update)
 
         updated_message = self.message.find_one_and_delete({"_id": id})
-        assert updated_message["text"] == new_text["text"]
-        assert updated_message["size"] == len(new_text["text"])
+        assert updated_message["text"] == update["text"]
         assert updated_message["title"] == old_message["title"]
         assert res.status_code == 201 and res.json["modified_count"] == 1
+
+    def test_put_message_with_too_large_title(self, client):
+        from .entities.message import TITLE_MAX_LENGTH
+
+        old_message = create_message(text="text", title="title")
+        id = self.message.insert_one(old_message).inserted_id
+
+        update = {"title": "a" * (TITLE_MAX_LENGTH + 1)}
+        res = client.put(f"/api/v1/messages/{id}", json=update)
+
+        assert self.message.delete_one({"_id": id}).acknowledged
+        assert res.status_code == 400
+        assert res.json["message"] == "Message's title is not valid."
+        assert res.json["error"] == "InvalidMessage"
+
+    def test_put_message_using_params(self, client):
+        random_string = get_random_string(10)
+        messages = [
+            create_message(title=random_string + "a", text="text"),
+            create_message(title=random_string + "b", text="text"),
+        ]
+        inserted_ids = self.message.insert_many(messages).inserted_ids
+
+        today = datetime.now().strftime("%Y%m%d")  # YYYYMMDD
+        update = {"text": "new text"}
+        res = client.put(
+            f"/api/messages?created_at=gt:{today}&title=rg:{random_string}",
+            json=update,
+        )
+
+        for id in inserted_ids:
+            updated_message = self.message.find_one_and_delete({"_id": id})
+            assert updated_message["text"] == update["text"]
+
+        assert res.status_code == 201 and res.json["modified_count"] == 2
+
+    def test_put_message_using_invalid_params(self, client):
+        random_string = get_random_string(10)
+        res = client.put(
+            f"/api/messages?title=rg:{random_string}&invalidParam=0",
+            json={"text": "new text"},
+        )
+
+        assert res.status_code == 400
+        assert res.json["message"] == "invalidParam is not a valid parameter."
+        assert res.json["error"] == "InvalidParam"
