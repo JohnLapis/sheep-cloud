@@ -44,7 +44,7 @@ class TestMessageRoute:
 
         res = client.get(f"/api/messages/{message_id}")
 
-        assert self.message.delete_one({"_id": message_id}).acknowledged
+        assert self.message.delete_one({"_id": message_id}).deleted_count == 1
         assert res.status_code == 200
         message["_id"] = str(message_id)
         assert res.json["text"] == message["text"]
@@ -84,7 +84,7 @@ class TestMessageRoute:
             create_message(text="text2"),
         ]
         inserted_ids = set(
-            [str(m) for m in self.message.insert_many(messages).inserted_ids]
+            [m for m in self.message.insert_many(messages).inserted_ids]
         )
 
         today = datetime.now().strftime("%Y%m%d")  # YYYYMMDD
@@ -94,9 +94,11 @@ class TestMessageRoute:
         )
 
         assert res.status_code == 200
-        assert set([m["_id"] for m in res.json["messages"]]) == inserted_ids
+        assert (
+            set([ObjectId(m["_id"]) for m in res.json["messages"]]) == inserted_ids
+        )
         for id in inserted_ids:
-            assert self.message.delete_one({"_id": id}).acknowledged
+            assert self.message.delete_one({"_id": id}).deleted_count == 1
 
     def test_get_message_using_invalid_params(self, client):
         random_string = get_random_string(10)
@@ -164,7 +166,7 @@ class TestMessageRoute:
         update = {"title": "a" * (TITLE_MAX_LENGTH + 1)}
         res = client.put(f"/api/v1/messages/{id}", json=update)
 
-        assert self.message.delete_one({"_id": id}).acknowledged
+        assert self.message.delete_one({"_id": id}).deleted_count == 1
         assert res.status_code == 400
         assert res.json["message"] == "Message's title is not valid."
         assert res.json["error"] == "InvalidMessage"
