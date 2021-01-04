@@ -82,5 +82,14 @@ class MessageView(MethodView):
         assert res.acknowledged
         return {"modified_count": res.modified_count}, 201
 
-    def delete(self, id):
-        pass
+    def delete(self, id=None):
+        if id is None:
+            url_query = MultiDict(request.args)
+            res = self.db.message.delete_many(
+                self.db.create_query_from_dict(url_query)
+            )
+        else:
+            res = self.db.message.delete_one({"_id": ObjectId(id)})
+
+        assert res.acknowledged
+        return {"deleted_count": res.deleted_count}, 200

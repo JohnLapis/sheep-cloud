@@ -200,3 +200,44 @@ class TestMessageRoute:
         assert res.status_code == 400
         assert res.json["message"] == "'invalidParam' is not a valid parameter."
         assert res.json["error"] == "InvalidParam"
+
+    def test_delete_message_using_id(self, client):
+        random_string = get_random_string(10).lower()
+        message = create_message(text=random_string.upper())
+        id = self.message.insert_one(message).inserted_id
+
+        res = client.delete(f"/api/messages/{id}")
+
+        assert not self.message.find_one({"_id": id})
+        assert res.status_code == 200
+        assert res.json["deleted_count"] == 1
+
+    def test_delete_message_using_nonexistent_id(self, client):
+        # guarantees id doesn't already exist
+        message = create_message(text="text")
+        id = self.message.insert_one(message).inserted_id
+        self.message.delete_one({"_id": id})
+
+        res = client.delete(f"/api/messages/{id}")
+
+        assert res.status_code == 200
+        assert res.json["deleted_count"] == 0
+
+    def test_delete_message_using_params(self, client):
+        random_string = get_random_string(10).lower()
+        messages = [
+            create_message(title=random_string.upper(), text="text"),
+            create_message(title=random_string.upper(), text="text"),
+            create_message(title=random_string.upper(), text="text"),
+        ]
+        inserted_ids = self.message.insert_many(messages).inserted_ids
+
+        res = client.delete(f"/api/messages?title=rg:{random_string}&title=op:i")
+
+        total_not_deleted = 0
+        for id in inserted_ids:
+            total_not_deleted += self.message.delete_one({"_id": id}).deleted_count
+
+        assert total_not_deleted == 0
+        assert res.status_code == 200
+        assert res.json["deleted_count"] == len(inserted_ids)
