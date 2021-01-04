@@ -51,7 +51,7 @@ def get_param(name):
     try:
         return PARAM_DICT[name]
     except KeyError:
-        raise InvalidParam(f"{name} is not a valid parameter.")
+        raise InvalidParam(f"'{name}' is not a valid parameter.")
 
 
 def get_param_type(param_name):
@@ -67,4 +67,4 @@ def parse_param_expr(param, expr):
         op, value = get_param_parser(param)(expr)
         return op, value
     except ValueError:
-        raise InvalidExpression(f"{expr} is not a valid expression.")
+        raise InvalidExpression(f"'{expr}' is not a valid expression.")

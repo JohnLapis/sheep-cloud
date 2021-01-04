@@ -30,7 +30,7 @@ def convert_to_date(value):
         match["day"] = int(match["day"]) or 1
         return datetime.datetime(**match)
     except (AttributeError, TypeError):
-        raise InvalidValue(f"{value} is not a valid date.")
+        raise InvalidValue(f"'{value}' is not a valid date.")
 
 
 TYPE_CONVERTER_DICT = {
@@ -62,7 +62,7 @@ def get_db_op(op):
     try:
         return OPERATOR_TABLE[op]
     except KeyError:
-        raise InvalidOperator(f"{op} operator doesn't exist.")
+        raise InvalidOperator(f"'{op}' operator doesn't exist.")
 
 
 def get_db_host():

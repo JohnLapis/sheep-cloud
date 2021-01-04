@@ -187,5 +187,5 @@ class TestMessageRoute:
         )
 
         assert res.status_code == 400
-        assert res.json["message"] == "invalidParam is not a valid parameter."
+        assert res.json["message"] == "'invalidParam' is not a valid parameter."
         assert res.json["error"] == "InvalidParam"
