@@ -87,7 +87,7 @@ class TestMessageRoute:
             [str(m) for m in self.message.insert_many(messages).inserted_ids]
         )
 
-        today = datetime.now().strftime("%Y%m%d") # YYYYMMDD
+        today = datetime.now().strftime("%Y%m%d")  # YYYYMMDD
 
         res = client.get(
             f"/api/messages?created_at=gt:{today}&sort=-created_at&limit=2"

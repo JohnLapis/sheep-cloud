@@ -71,7 +71,8 @@ class MessageView(MethodView):
         if id is None:
             url_query = MultiDict(request.args)
             res = self.db.message.update_many(
-                self.db.create_query_from_dict(url_query), self.db.create_update_query(update)
+                self.db.create_query_from_dict(url_query),
+                self.db.create_update_query(update),
             )
         else:
             res = self.db.message.update_one(
