@@ -66,8 +66,8 @@ class TestDatabaseClient:
             ),
         ],
     )
-    def test_create_generic_query_with_valid_input(self, param, exprs, expected):
-        assert self.client.create_generic_query(param, exprs) == expected
+    def test_create_param_query_with_valid_input(self, param, exprs, expected):
+        assert self.client.create_param_query(param, exprs) == expected
 
     @pytest.mark.parametrize(
         "param,exprs,error",
@@ -79,9 +79,9 @@ class TestDatabaseClient:
             ("created_at", [""], InvalidExpression),
         ],
     )
-    def test_create_generic_query_with_invalid_input(self, param, exprs, error):
+    def test_create_param_query_with_invalid_input(self, param, exprs, error):
         with pytest.raises(error):
-            self.client.create_generic_query(param, exprs)
+            self.client.create_param_query(param, exprs)
 
     @pytest.mark.parametrize(
         "url_query,expected",

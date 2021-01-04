@@ -82,7 +82,7 @@ class DatabaseClient:
     def __getattr__(self, name):
         return getattr(self._db, name)
 
-    def create_generic_query(self, param, exprs):
+    def create_param_query(self, param, exprs):
         operations = {}
         for expr in exprs:
             op, value = parse_param_expr(param, expr)
@@ -97,7 +97,7 @@ class DatabaseClient:
 
         for param in query_dict.keys():
             values = query_dict.getlist(param)
-            subqueries.append(self.create_generic_query(param, values))
+            subqueries.append(self.create_param_query(param, values))
 
         if not subqueries:
             raise InvalidQuery("No parameters were given.")
