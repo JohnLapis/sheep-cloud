@@ -16,7 +16,7 @@ def handle_message(view):
     @wraps(view)
     def wrapper(*args, **kwargs):
         res = view(*args, **kwargs)
-        if res.get("messages"):
+        if "messages" in res:
             return {"messages": list(map(serialize_id, res["messages"]))}
         else:
             return serialize_id(res)
