@@ -110,19 +110,6 @@ class TestMessageRoute:
         assert res.json["message"] == "Message's text is not valid."
         assert res.json["error"] == "InvalidMessage"
 
-    def test_post_message_with_too_large_title(self, client):
-        from .entities.message import TITLE_MAX_LENGTH
-
-        message = {
-            "text": "test post message",
-            "title": "a" * (TITLE_MAX_LENGTH + 1),
-        }
-        res = client.post("/api/v1/messages", json=message)
-
-        assert res.status_code == 400
-        assert res.json["message"] == "Message's title is not valid."
-        assert res.json["error"] == "InvalidMessage"
-
     def test_post_many_messages(self, client):
         NUM_MESSAGES = 5
         messages = [{"text": f"test post message {i}"} for i in range(NUM_MESSAGES)]
@@ -151,14 +138,16 @@ class TestMessageRoute:
         assert updated_message["title"] == old_message["title"]
         assert res.status_code == 201 and res.json["modified_count"] == 1
 
-    def test_put_message_using_invalid_id(self, client):
-        id = "invalid id"
-        res = client.put(f"/api/messages/{id}", json={"text": "text"})
+    def test_put_message_with_too_large_title(self, client):
+        from .entities.message import TITLE_MAX_LENGTH
 
+        old_message = create_message(text="text", title="title")
+        id = self.message.insert_one(old_message).inserted_id
+
+        update = {"title": "a" * (TITLE_MAX_LENGTH + 1)}
+        res = client.put(f"/api/v1/messages/{id}", json=update)
+
+        assert self.message.delete_one({"_id": id}).acknowledged
         assert res.status_code == 400
-        error_message = (
-            f"'{id}' is not a valid ObjectId, it must be a 12-byte"
-            " input or a 24-character hex string"
-        )
-        assert error_message == res.json["message"]
-        assert res.json["error"] == "InvalidId"
+        assert res.json["message"] == "Message's title is not valid."
+        assert res.json["error"] == "InvalidMessage"
