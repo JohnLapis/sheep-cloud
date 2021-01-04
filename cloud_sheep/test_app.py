@@ -98,6 +98,17 @@ class TestMessageRoute:
         for id in inserted_ids:
             assert self.message.delete_one({"_id": id}).acknowledged
 
+    def test_get_message_using_invalid_params(self, client):
+        random_string = get_random_string(10)
+        res = client.put(
+            f"/api/messages?created_at=gt:not a date",
+            json={"text": "new text"},
+        )
+
+        assert res.status_code == 400
+        assert res.json["message"] == "'not a date' is not a valid date."
+        assert res.json["error"] == "InvalidValue"
+
     def test_post_message(self, client):
         message = {"text": "test post message", "title": "test post title"}
         res = client.post("/api/v1/messages", json=message)
