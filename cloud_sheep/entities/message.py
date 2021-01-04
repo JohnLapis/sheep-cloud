@@ -29,6 +29,22 @@ def create_message(*, text=None, title=None, **kwargs):
         raise InvalidMessage("Message is not valid.")
 
 
+def create_message_update(*, text=None, title=None, **kwargs):
+    try:
+        assert not kwargs
+        update = {}
+        update["last_modified"] = now()
+        if title is not None:
+            validate_title(title)
+            update["title"] = title
+        if text is not None:
+            validate_text(text)
+            update["text"] = text
+        return update
+    except AssertionError:
+        raise InvalidMessage("Message is not valid.")
+
+
 def validate_text(text):
     try:
         assert isinstance(text, str)
