@@ -130,10 +130,22 @@ class TestMessageRoute:
         old_message = {"text": "test put text", "title": "test put title"}
         id = self.message.insert_one(old_message).inserted_id
 
-        new_text = {"text": "new text"}
-        res = client.put(f"/api/v1/messages/{id}", json=new_text)
+        update = {"text": "new text"}
+        res = client.put(f"/api/v1/messages/{id}", json=update)
 
         updated_message = self.message.find_one_and_delete({"_id": id})
-        assert updated_message["text"] == new_text["text"]
+        assert updated_message["text"] == update["text"]
         assert updated_message["title"] == old_message["title"]
         assert res.status_code == 201 and res.json["modified_count"] == 1
+
+    def test_put_message_using_invalid_id(self, client):
+        id = "invalid id"
+        res = client.put(f"/api/messages/{id}", json={"text": "text"})
+
+        assert res.status_code == 400
+        error_message = (
+            f"'{id}' is not a valid ObjectId, it must be a 12-byte"
+            " input or a 24-character hex string"
+        )
+        assert error_message == res.json["message"]
+        assert res.json["error"] == "InvalidId"

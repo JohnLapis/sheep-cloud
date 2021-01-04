@@ -5,7 +5,7 @@ from flask import abort, request
 from flask.views import MethodView
 from werkzeug.datastructures import MultiDict
 
-from ..entities.message import create_message, create_partial_message
+from ..entities.message import create_message, create_message_update
 
 
 def handle_message(view):
@@ -67,12 +67,13 @@ class MessageView(MethodView):
         return {"inserted_ids": list(map(str, inserted_ids))}, 201
 
     def put(self, id=None):
-        # i.e., if the filter was given
+        update = create_message_update(**request.json)
         if id is None:
             pass
         else:
-            update = create_partial_message(**request.json)
-            res = self.db.message.update_one({"_id": ObjectId(id)}, {"$set": update})
+            res = self.db.message.update_one(
+                {"_id": ObjectId(id)}, self.db.create_update_query(update)
+            )
             assert res.matched_count == 1
 
         assert res.acknowledged
