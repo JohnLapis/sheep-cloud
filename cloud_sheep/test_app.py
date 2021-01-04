@@ -1,9 +1,11 @@
+import re
 from datetime import datetime
 
 import pytest
 from bson.objectid import ObjectId
 
 from . import LATEST_VERSION, app
+from .entities.message import create_message
 from .mongodb import DatabaseClient
 
 
@@ -31,7 +33,7 @@ class TestMessageRoute:
         cls.db.conn.close()
 
     def test_get_message_using_id(self, client):
-        message = {"text": "test get message"}
+        message = create_message(text="test get message")
         message_id = self.message.insert_one(message).inserted_id
 
         res = client.get(f"/api/messages/{message_id}")
@@ -39,11 +41,17 @@ class TestMessageRoute:
         assert self.message.delete_one({"_id": message_id}).acknowledged
         assert res.status_code == 200
         message["_id"] = str(message_id)
-        assert res.json == message
+        assert res.json["text"] == message["text"]
+
+        # timezone (%Z) is ignored
+        timeformat = "%a, %d %b %Y %H:%M:%S"
+        assert re.match(
+            message["created_at"].strftime(timeformat), res.json["created_at"]
+        )
 
     def test_get_message_using_nonexistent_id(self, client):
         # guarantees id doesn't already exist
-        message = {"text": "text"}
+        message = create_message(text="text")
         id = self.message.insert_one(message).inserted_id
         self.message.delete_one({"_id": id})
 
@@ -64,13 +72,16 @@ class TestMessageRoute:
         assert res.json["error"] == "InvalidId"
 
     def test_get_message_using_params(self, client):
+        # the messages have the attr "created_at" set to the current date
         messages = [
-            {"text": "text", "created_at": datetime.now()},
-            {"text": "text", "created_at": datetime.now()},
+            create_message(text="text1"),
+            create_message(text="text2"),
         ]
-        inserted_ids = set(map(str, self.message.insert_many(messages).inserted_ids))
+        inserted_ids = set(
+            [str(m) for m in self.message.insert_many(messages).inserted_ids]
+        )
 
-        today = datetime.now().strftime("%Y%m%d")  # YYYYMMDD
+        today = datetime.now().strftime("%Y%m%d") # YYYYMMDD
 
         res = client.get(
             f"/api/messages?created_at=gt:{today}&sort=-created_at&limit=2"
