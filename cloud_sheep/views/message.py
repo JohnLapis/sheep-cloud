@@ -69,7 +69,10 @@ class MessageView(MethodView):
     def put(self, id=None):
         update = create_message_update(**request.json)
         if id is None:
-            pass
+            url_query = MultiDict(request.args)
+            res = self.db.message.update_many(
+                self.db.create_query_from_dict(url_query), self.db.create_update_query(update)
+            )
         else:
             res = self.db.message.update_one(
                 {"_id": ObjectId(id)}, self.db.create_update_query(update)

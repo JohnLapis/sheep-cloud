@@ -1,3 +1,4 @@
+import random
 import re
 from datetime import datetime
 
@@ -13,6 +14,11 @@ from .mongodb import DatabaseClient
 def client():
     with app.test_client() as client:
         yield client
+
+
+def get_random_string(length):
+    letters = "abcdefghijklmnopqrstuvwxyz"
+    return "".join(random.choice(letters) for i in range(length))
 
 
 def test_api_route_versioning(client):
@@ -151,3 +157,35 @@ class TestMessageRoute:
         assert res.status_code == 400
         assert res.json["message"] == "Message's title is not valid."
         assert res.json["error"] == "InvalidMessage"
+
+    def test_put_message_using_params(self, client):
+        random_string = get_random_string(10)
+        messages = [
+            create_message(title=random_string + "a", text="text"),
+            create_message(title=random_string + "b", text="text"),
+        ]
+        inserted_ids = self.message.insert_many(messages).inserted_ids
+
+        today = datetime.now().strftime("%Y%m%d")  # YYYYMMDD
+        update = {"text": "new text"}
+        res = client.put(
+            f"/api/messages?created_at=gt:{today}&title=rg:{random_string}",
+            json=update,
+        )
+
+        for id in inserted_ids:
+            updated_message = self.message.find_one_and_delete({"_id": id})
+            assert updated_message["text"] == update["text"]
+
+        assert res.status_code == 201 and res.json["modified_count"] == 2
+
+    def test_put_message_using_invalid_params(self, client):
+        random_string = get_random_string(10)
+        res = client.put(
+            f"/api/messages?title=rg:{random_string}&invalidParam=0",
+            json={"text": "new text"},
+        )
+
+        assert res.status_code == 400
+        assert res.json["message"] == "invalidParam is not a valid parameter."
+        assert res.json["error"] == "InvalidParam"
