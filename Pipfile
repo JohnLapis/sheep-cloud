@@ -10,6 +10,7 @@ black = "*"
 flake8 = "*"
 pre-commit = "*"
 isort = "*"
+prospector = "*"
 
 [packages]
 importlib-metadata = "==2.1.1"
