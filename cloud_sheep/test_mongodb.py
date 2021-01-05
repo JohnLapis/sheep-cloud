@@ -233,12 +233,10 @@ class TestDatabaseClient:
             with pytest.raises(error):
                 self.client.create_text_query(MultiDict(ctx.request.args))
 
-    @pytest.mark.only
     @pytest.mark.parametrize("update,expected", [({"a": "b"}, {"$set": {"a": "b"}})])
     def test_create_update_query_with_valid_input(self, app, update, expected):
         assert self.client.create_update_query(update) == expected
 
-    @pytest.mark.only
     @pytest.mark.parametrize("update,error", [([], InvalidValue)])
     def test_create_update_query_with_invalid_input(self, app, update, error):
         with pytest.raises(error):
