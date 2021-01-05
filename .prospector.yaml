@@ -1,0 +1,14 @@
+output-format: json
+
+strictness: medium
+
+inherits:
+  - full_pep8
+
+uses:
+  - flask
+
+max-line-length: 85
+
+test-warnings: true
+member-warnings: true
