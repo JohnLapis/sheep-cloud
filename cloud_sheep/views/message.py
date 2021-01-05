@@ -38,14 +38,13 @@ class MessageView(MethodView):
 
         url_query = MultiDict(request.args)
         limit_param = self.db.get_limit_param(url_query.pop("limit", default=None))
-        sorting_params = [
-            self.db.get_sort_param(param)
-            for param in url_query.poplist("sort") or ["last_modified"]
-        ]
+        sorting_params = list(map(self.db.get_sort_param, url_query.poplist("sort")))
         query = self.db.create_query_from_dict(url_query)
-        messages = (
-            self.db.message.find(query).sort(sorting_params).limit(limit_param)
-        )
+
+        cursor = self.db.message.find(query)
+        if sorting_params:
+            cursor = cursor.sort(sorting_params)
+        messages = cursor.limit(limit_param)
         if not messages:
             abort(404)
         return {"messages": messages}

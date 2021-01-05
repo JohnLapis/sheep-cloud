@@ -104,6 +104,26 @@ class TestMessageRoute:
         assert res.json["message"] == "'not a date' is not a valid date."
         assert res.json["error"] == "InvalidValue"
 
+    def test_get_message_using_text_query_param(self, client):
+        """Message with most matches from the text query is sorted before."""
+        random_string = get_random_string(10)
+        messages = [
+            create_message(text=random_string, title=get_random_string(10)),
+            create_message(text=random_string, title=random_string),
+            create_message(text=random_string, title=get_random_string(10)),
+        ]
+        inserted_ids = self.message.insert_many(messages).inserted_ids
+
+        res = client.get(f"/api/messages?q={random_string}&limit=1")
+
+        for id in inserted_ids:
+            assert self.message.delete_one({"_id": id}).deleted_count == 1
+
+        assert res.status_code == 200
+        assert len(res.json["messages"]) == 1
+        assert res.json["messages"][0]["text"] == random_string
+        assert res.json["messages"][0]["title"] == random_string
+
     def test_post_message(self, client):
         message = {"text": "test post message", "title": "test post title"}
         res = client.post("/api/v1/messages", json=message)
