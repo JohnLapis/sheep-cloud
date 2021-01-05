@@ -83,10 +83,7 @@ class TestMessageRoute:
             create_message(text="text1"),
             create_message(text="text2"),
         ]
-        inserted_ids = set(
-            [m for m in self.message.insert_many(messages).inserted_ids]
-        )
-
+        inserted_ids = self.message.insert_many(messages).inserted_ids
         today = datetime.now().strftime("%Y%m%d")  # YYYYMMDD
 
         res = client.get(
@@ -94,9 +91,9 @@ class TestMessageRoute:
         )
 
         assert res.status_code == 200
-        assert (
-            set([ObjectId(m["_id"]) for m in res.json["messages"]]) == inserted_ids
-        )
+        response_ids = [ObjectId(m["_id"]) for m in res.json["messages"]]
+        assert set(response_ids) == set(inserted_ids)
+
         for id in inserted_ids:
             assert self.message.delete_one({"_id": id}).deleted_count == 1
 
