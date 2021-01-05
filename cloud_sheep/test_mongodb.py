@@ -2,6 +2,8 @@ from datetime import datetime
 
 import pymongo
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 from werkzeug.datastructures import MultiDict
 from werkzeug.exceptions import BadRequestKeyError
 
@@ -149,7 +151,10 @@ class TestDatabaseClient:
     )
     def test_create_query_from_dict_with_valid_input(self, app, url_query, expected):
         with app.test_request_context(url_query) as ctx:
-            assert self.client.create_query_from_dict(MultiDict(ctx.request.args)) == expected
+            assert (
+                self.client.create_query_from_dict(MultiDict(ctx.request.args))
+                == expected
+            )
 
     @pytest.mark.parametrize(
         "url_query,error",
@@ -233,14 +238,13 @@ class TestDatabaseClient:
             with pytest.raises(error):
                 self.client.create_text_query(MultiDict(ctx.request.args))
 
-    @pytest.mark.parametrize("update,expected", [({"a": "b"}, {"$set": {"a": "b"}})])
-    def test_create_update_query_with_valid_input(self, app, update, expected):
-        assert self.client.create_update_query(update) == expected
+    @given(st.dictionaries(st.text(max_size=5), st.text(max_size=5)))
+    def test_create_update_query_with_valid_input(self, app, update):
+        assert self.client.create_update_query(update) == {"$set": update}
 
-    @pytest.mark.parametrize("update,error", [([], InvalidValue)])
-    def test_create_update_query_with_invalid_input(self, app, update, error):
-        with pytest.raises(error):
-            self.client.create_update_query(update)
+    def test_create_update_query_with_invalid_input(self, app):
+        with pytest.raises(InvalidValue):
+            self.client.create_update_query([])
 
     @pytest.mark.parametrize(
         "param,expected",

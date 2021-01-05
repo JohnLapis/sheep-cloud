@@ -1,6 +1,8 @@
 from datetime import datetime
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from .message import (
     TEXT_MAX_LENGTH,
@@ -21,13 +23,7 @@ class TooLongTitle(str):
         return TITLE_MAX_LENGTH + 1
 
 
-@pytest.mark.parametrize(
-    "message",
-    [
-        {"text": "text"},
-        {"text": "text", "title": "title"},
-    ],
-)
+@given(st.fixed_dictionaries({"text": st.text()}, optional={"title": st.text()}))
 def test_create_message_with_valid_input(message):
     created_message = create_message(**message)
 
@@ -81,15 +77,7 @@ def test_create_message_with_invalid_title(message):
         create_message(**message)
 
 
-@pytest.mark.parametrize(
-    "message",
-    [
-        {},
-        {"text": "text"},
-        {"title": "title"},
-        {"text": "text", "title": "title"},
-    ],
-)
+@given(st.dictionaries(st.sampled_from(["text", "title"]), st.text()))
 def test_create_message_update_with_valid_input(message):
     created_message = create_message_update(**message)
 
