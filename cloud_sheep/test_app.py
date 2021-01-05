@@ -101,10 +101,7 @@ class TestMessageRoute:
             assert self.message.delete_one({"_id": id}).deleted_count == 1
 
     def test_get_message_using_invalid_params(self, client):
-        res = client.put(
-            "/api/messages?created_at=gt:not a date",
-            json={"text": "new text"},
-        )
+        res = client.get("/api/messages?created_at=gt:not a date")
 
         assert res.status_code == 400
         assert res.json["message"] == "'not a date' is not a valid date."
