@@ -23,8 +23,8 @@ class InvalidOperator(Exception):
 
 def convert_to_date(value):
     try:
-        PATTERN = re.compile(r"^(?P<year>\d{4})(?P<month>\d{2})?(?P<day>\d{2})?$")
-        match = re.match(PATTERN, value).groupdict(default=0)
+        pattern = re.compile(r"^(?P<year>\d{4})(?P<month>\d{2})?(?P<day>\d{2})?$")
+        match = re.match(pattern, value).groupdict(default=0)
         match["year"] = int(match["year"])
         match["month"] = int(match["month"]) or 1
         match["day"] = int(match["day"]) or 1
@@ -58,11 +58,11 @@ OPERATOR_TABLE = {
 }
 
 
-def get_db_op(op):
+def get_db_op(name):
     try:
-        return OPERATOR_TABLE[op]
+        return OPERATOR_TABLE[name]
     except KeyError:
-        raise InvalidOperator(f"'{op}' operator doesn't exist.")
+        raise InvalidOperator(f"'{name}' operator doesn't exist.")
 
 
 def get_db_host():

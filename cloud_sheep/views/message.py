@@ -18,8 +18,7 @@ def handle_message(view):
         res = view(*args, **kwargs)
         if "messages" in res:
             return {"messages": list(map(serialize_id, res["messages"]))}
-        else:
-            return serialize_id(res)
+        return serialize_id(res)
 
     return wrapper
 
@@ -31,30 +30,28 @@ class MessageView(MethodView):
 
     @handle_message
     def get(self, id=None):
-        if id is None:
-            url_query = MultiDict(request.args)
-            limit_param = self.db.get_limit_param(
-                url_query.pop("limit", default=None)
-            )
-            sorting_params = [
-                self.db.get_sort_param(param)
-                for param in url_query.poplist("sort") or ["last_modified"]
-            ]
-            query = self.db.create_query_from_dict(url_query)
-            messages = (
-                self.db.message.find(query).sort(sorting_params).limit(limit_param)
-            )
-            if not messages:
-                abort(404)
-            return {"messages": messages}
-        else:
+        if id is not None:
             message = self.db.message.find_one(ObjectId(id))
             if not message:
                 abort(404)
             return message
 
+        url_query = MultiDict(request.args)
+        limit_param = self.db.get_limit_param(url_query.pop("limit", default=None))
+        sorting_params = [
+            self.db.get_sort_param(param)
+            for param in url_query.poplist("sort") or ["last_modified"]
+        ]
+        query = self.db.create_query_from_dict(url_query)
+        messages = (
+            self.db.message.find(query).sort(sorting_params).limit(limit_param)
+        )
+        if not messages:
+            abort(404)
+        return {"messages": messages}
+
     def post(self):
-        if type(request.json) == list:
+        if isinstance(request.json, list):
             messages = [create_message(**m) for m in request.json]
             res = self.db.message.insert_many(messages)
             inserted_ids = res.inserted_ids

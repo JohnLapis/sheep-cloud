@@ -1,14 +1,14 @@
 from .message import MessageView
 
-views = {}
+VIEWS = {}
 
 
 def setup_views(*, db):
-    global views
-    views = {
+    global VIEWS
+    VIEWS = {
         "message_view": MessageView.as_view("get_message", db),
     }
 
 
 def get_views():
-    return views
+    return VIEWS

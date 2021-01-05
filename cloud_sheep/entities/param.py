@@ -34,8 +34,7 @@ class TextSearchParam(Param):
     def parse(self, expr):
         if ":" in expr:
             return expr.split(":")
-        else:
-            return "", expr
+        return "", expr
 
 
 PARAM_DICT = {
